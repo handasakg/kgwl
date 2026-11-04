@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>מערכת ניהול ובקרה חשבות</title>
     <!-- PWA: התקנה כאפליקציה במכשיר נייד -->
-    <link rel="manifest" href="manifest.webmanifest?v=4">
+    <link rel="manifest" href="manifest.webmanifest?v=5">
     <!-- צבע שורת הכותרת של החלון: רק בנייד. במחשב נשאר צבע הדפדפן הרגיל -->
     <meta name="theme-color" content="#12353b" media="(max-width: 768px)">
     <meta name="mobile-web-app-capable" content="yes">
@@ -8273,7 +8273,7 @@ themeSyncUI();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', () => {
         /* בודקים מיד אם יש גרסה חדשה של האתר, ומרעננים פעם אחת כשהיא נכנסת לפעולה – כך עדכונים מופיעים בלי לנקות מטמון ידנית */
-        navigator.serviceWorker.register('sw.js?v=20261104d', { updateViaCache: 'none' }).then(r => { try { r.update(); } catch (e) { } }).catch(() => { });
+        navigator.serviceWorker.register('sw.js?v=20261104e', { updateViaCache: 'none' }).then(r => { try { r.update(); } catch (e) { } }).catch(() => { });
         let reloaded = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloaded) return; reloaded = true; location.reload(); });
     });
