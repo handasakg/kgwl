@@ -28313,6 +28313,26 @@ tr.ctf-row>td:nth-child(2){box-shadow:inset -3px 0 0 #f59e0b}
 select.ctf-mv{display:block;margin-top:4px;max-width:170px;font-size:11px;padding:3px 4px;border-radius:7px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;font-weight:700;cursor:pointer}
 html[data-mode=dark] select.ctf-mv{background:rgba(245,158,11,.15);color:#fcd34d}
 select.ctf-mv option,select.ctf-mv optgroup{background:var(--surface,#fff);color:var(--text,#111)}
+
+/* חלון עריכת שם */
+#ctxEdW{position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;padding:16px;background:transparent}
+#ctxEdW[hidden]{display:none}
+#ctxEdW .ce-dim{position:absolute;inset:0;background:rgb(0 0 0 / .45)}
+#ctxEdW .ce-box{position:relative;width:100%;max-width:440px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:16px;background:var(--surface,#fff);color:var(--text,#111);box-shadow:0 20px 50px rgba(0,0,0,.4);margin:0}
+#ctxEdW .ce-h{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:900}
+#ctxEdW .ce-h i{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:rgb(var(--ac-600));color:#fff;font-size:15px}
+#ctxEdW .ce-l{font-size:12.5px;color:var(--text-3,#6b7280);font-weight:700}
+#ctxEdW .ce-l span{color:var(--text,#111)}
+html body #ctxEdW .ce-in{box-sizing:border-box!important;width:100%!important;padding:12px 14px!important;border:1.5px solid rgb(var(--ac-400))!important;border-radius:11px!important;background:var(--surface,#fff)!important;color:var(--text,#111)!important;font-size:16px!important;font-weight:700;outline:0!important;box-shadow:none!important}
+html body #ctxEdW .ce-in:focus{border-color:rgb(var(--ac-600))!important;box-shadow:0 0 0 3px rgb(var(--ac-500) / .22)!important}
+#ctxEdW .ce-err{font-size:13px;font-weight:800;color:#b91c1c;background:#fef2f2;border:1px solid #fca5a5;border-radius:9px;padding:8px 10px}
+#ctxEdW .ce-err[hidden]{display:none}
+#ctxEdW .ce-b{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html body #ctxEdW .ce-b button{all:unset;box-sizing:border-box!important;display:flex!important;align-items:center;justify-content:center;gap:7px;height:46px!important;border-radius:11px!important;font-size:15px!important;font-weight:800!important;cursor:pointer;text-align:center}
+html body #ctxEdW .ce-sv{background:#16a34a!important;color:#fff!important}
+html body #ctxEdW .ce-sv:hover{background:#15803d!important}
+html body #ctxEdW .ce-cn{background:var(--surface-2,#f1f5f9)!important;color:var(--text,#111)!important;border:1.5px solid var(--border,#d1d5db)!important}
+html body #ctxEdW .ce-cn:hover{border-color:rgb(var(--ac-500))!important}
 /* ctx-search-frame */
 html body #ctxPick .cx-q{flex:none!important;min-height:46px!important;margin:14px 20px 2px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:10px!important;padding:0 14px!important;border:1.5px solid var(--border,#d1d5db)!important;border-radius:12px!important;background:var(--surface,#fff)!important;overflow:hidden;transition:border-color .15s,box-shadow .15s}
 html body #ctxPick .cx-q:focus-within{border-color:rgb(var(--ac-600))!important;box-shadow:0 0 0 3px rgb(var(--ac-500) / .2)!important}
@@ -28447,12 +28467,43 @@ function pDraw() {
     </div>`;
   });
   if (!all.length) h += `<div class="cx-e">${E(c.empty || 'אין פריטים')}</div>`; else if (!list.length) h += '<div class="cx-e">לא נמצאו תוצאות</div>';
+  const olL = document.querySelector('#ctxPickBox .cx-l'), olS = olL ? olL.scrollTop : 0;
   $('ctxPickBox').innerHTML = `<div class="cx-h"><i class="fa-solid ${c.icon}"></i><span class="cx-ht">${E(c.title)}${c.subtitle ? `<small>${c.subtitle}</small>` : ''}</span><button type="button" class="cx-x" data-px="1" title="סגירה" aria-label="סגירה"><i class="fa-solid fa-xmark"></i></button></div>
     ${all.length > 5 ? `<div class="cx-q"><i class="fa-solid fa-magnifying-glass"></i><input id="ctxQ" value="${E(P.q)}" placeholder="חיפוש..."></div>` : ''}
     <div class="cx-l${c.compact ? ' cmpl' : ''}${c.cardCls ? ' ' + c.cardCls : ''}" role="listbox">${h}</div>
     ${c.add && ed ? `<div class="cx-a"><label class="cx-al" for="ctxNew"><i class="fa-solid fa-circle-plus"></i> ${E(c.addLabel)}</label><input class="cx-in" id="ctxNew" maxlength="90" placeholder="${E(c.addPh || 'הקלד שם ולחץ Enter...')}"><button type="button" class="cx-add" data-pa="1"><i class="fa-solid fa-plus"></i> הוסף ובחר</button>${c.tip ? `<div class="cx-tip">${c.tip}</div>` : ''}</div>` : ''}`;
+  const nlL = document.querySelector('#ctxPickBox .cx-l'); if (nlL && olS) nlL.scrollTop = olS;
   const fe = $('ctxEd'); if (fe) { try { fe.focus({ preventScroll: true }); } catch (x) { fe.focus(); } fe.select(); const cd = fe.closest('.cx-c'); if (cd) setTimeout(() => { try { cd.scrollIntoView({ block: 'nearest' }); } catch (x) { } }, 30); }
 }
+/* חלון עריכת שם נפרד – מעל רשימת הכרטיסיות, עם "שמור" ו"ביטול" שתמיד גלויים */
+document.body.insertAdjacentHTML('beforeend', '<div id="ctxEdW" hidden role="dialog" aria-modal="true" aria-labelledby="ctxEdT" data-lenis-prevent><div class="ce-dim"></div><form class="ce-box" dir="rtl" novalidate><div class="ce-h"><i class="fa-solid fa-pen"></i><b id="ctxEdT">עריכת שם</b></div><label class="ce-l" for="ctxEdI">השם הנוכחי: <span id="ctxEdOld"></span></label><input id="ctxEdI" class="ce-in" maxlength="90" autocomplete="off" enterkeyhint="done"><div class="ce-err" id="ctxEdErr" hidden></div><div class="ce-b"><button type="submit" class="ce-sv"><i class="fa-solid fa-check"></i> שמור</button><button type="button" class="ce-cn" data-ce-x="1"><i class="fa-solid fa-xmark"></i> ביטול</button></div></form></div>');
+const EW = $('ctxEdW'); let ewId = null, ewBusy = false;
+function pEditDlg(key) {
+  const c = P.cfg; if (!c || !c.rename) return;
+  const it = c.items().find(i => (i.key || i.id) === key) || c.items().find(i => i.id === key); if (!it) return;
+  ewId = (P.map && P.map.get(key)) || it.id;
+  $('ctxEdT').textContent = c.editTitle || 'עריכת שם';
+  $('ctxEdOld').textContent = it.title; $('ctxEdI').value = it.title; $('ctxEdErr').hidden = true;
+  EW.hidden = false;
+  setTimeout(() => { const i = $('ctxEdI'); try { i.focus({ preventScroll: true }); } catch (x) { i.focus(); } i.select(); }, 30);
+}
+const ewClose = () => { EW.hidden = true; ewId = null; };
+EW.querySelector('form').addEventListener('submit', async e => {
+  e.preventDefault(); e.stopPropagation();
+  const c = P.cfg; if (!c || !ewId || ewBusy) return;
+  const v = nrm($('ctxEdI').value), er = $('ctxEdErr');
+  if (!v) { er.textContent = 'השם לא יכול להיות ריק'; er.hidden = false; return; }
+  ewBusy = true;
+  try {
+    const err = await c.rename(ewId, v);
+    if (err) { er.textContent = String(err).replace(/^⚠️\s*/, ''); er.hidden = false; $('ctxEdI').focus(); return; }
+    ewClose(); pDraw(); note('✅ השם עודכן');
+  } finally { ewBusy = false; }
+});
+EW.addEventListener('pointerdown', e => { if (e.target.closest('[data-ce-x]')) { e.preventDefault(); ewClose(); } else if (e.target.classList.contains('ce-dim')) ewClose(); });
+EW.addEventListener('click', e => { if (e.target.closest('[data-ce-x]')) ewClose(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !EW.hidden) { e.stopPropagation(); e.preventDefault(); ewClose(); } }, true);
+$('ctxEdI').addEventListener('input', () => { $('ctxEdErr').hidden = true; });
 async function pAdd() {
   const c = P.cfg, i = $('ctxNew'); if (!c || !i) return;
   const v = nrm(i.value); if (!v) { i.focus(); return note('הקלד שם'); }
@@ -28488,7 +28539,7 @@ $('ctxPick').addEventListener('click', async e => {
   const s = e.target.closest('[data-ps]'); if (s) return pSave(s.dataset.ps);
   if (e.target.closest('[data-pc]')) { P.edit = null; return pDraw(); }
   if (P.edit && e.target.closest('[data-pk]')) { const i = $('ctxEd'); if (i) i.focus(); return; }
-  const ed = e.target.closest('[data-pe]'); if (ed) { P.edit = ed.dataset.pe; return pDraw(); }
+  const ed = e.target.closest('[data-pe]'); if (ed) { e.preventDefault(); return pEditDlg(ed.dataset.pe); }
   const d = e.target.closest('[data-pd]'); if (d) { await c.del(d.dataset.pd); if (P.cfg) pDraw(); return; }
   const p = e.target.closest('[data-pk]'); if (p) { c.pick(p.dataset.pk); pClose(); }
 });
