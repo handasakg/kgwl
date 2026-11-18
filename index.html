@@ -28850,7 +28850,7 @@ function cardsSubs() {
     withSub.forEach((x, j) => {
       const key = 'R:' + x.r.id, op = subOpen.has(key);
       const it = document.createElement('div'); it.className = 'ctc-sub ctc-sf' + (op ? '' : ' cl');
-      it.innerHTML = `<button type="button" class="ctc-sub-tg" data-cst="${E(key)}" aria-expanded="${op}" title="לחץ להצגת הפירוט"><i class="fa-solid ${op ? 'fa-folder-open' : 'fa-folder'}"></i><span class="nm"><b>${E(x.s.name)}</b> <small>· סעיף ${E(budLbl(x.b))}</small></span><i class="fa-solid fa-chevron-down cv"></i></button>
+      it.innerHTML = `<button type="button" class="ctc-sub-tg" data-cst="${E(key)}" aria-expanded="${op}" title="${E(x.s.name)}" aria-label="${E(x.s.name)} – לחץ להצגת הפירוט"><i class="fa-solid ${op ? 'fa-folder-open' : 'fa-folder'}"></i><span class="nm" title="${E(x.s.name)}"><b>${E(x.s.name)}</b></span><i class="fa-solid fa-chevron-down cv"></i></button>
         <div class="ctc-sub-b"><div class="ctc-sf-amt">${prjHtml(x.b.id, x.s.id, 'a')}</div><div class="ctc-sf-det"></div><button type="button" class="ctc-sub-det" data-csd="${E(x.b.id + '|' + x.s.id)}"><i class="fa-solid fa-list-ul"></i> הצג פירוט</button></div>`;
       const d = it.querySelector('.ctc-sf-det'); det[j].forEach(n => d.appendChild(n));
       wrap.appendChild(it);
@@ -29257,5 +29257,165 @@ setInterval(() => { if (busy) return; let n = 0; try { n = sync(true); } catch (
 window.budSyncNow = () => { const n = sync(true); if (n) { window.saveData(); redraw(); } return n; };
 })();
 </script>
+<style id="yfCss">
+#yfDlg{position:fixed;inset:0;z-index:115;display:flex;align-items:flex-start;justify-content:center;padding:16px;background:rgb(0 0 0 / .55);backdrop-filter:blur(3px);overflow-y:auto;overscroll-behavior:contain}
+#yfDlg[hidden]{display:none}
+#yfDlg .yf{margin:auto 0;width:100%;max-width:1100px;background:var(--surface,#fff);color:var(--text,#111);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:calc(100dvh - 32px);overflow:hidden}
+#yfDlg .yf-h{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border,#e5e7eb);background:var(--surface-2,#f8fafc)}
+#yfDlg .yf-h>i{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:rgb(var(--ac-600));color:#fff;font-size:18px;flex:none}
+#yfDlg .yf-ht{flex:1;min-width:0;font-size:19px;font-weight:900;display:flex;flex-direction:column}
+#yfDlg .yf-ht small{font-size:12.5px;font-weight:600;color:var(--text-3,#6b7280)}
+#yfDlg .yf-x{all:unset;width:40px;height:40px;border-radius:50%;border:1px solid var(--border,#e5e7eb);display:grid;place-items:center;cursor:pointer;color:var(--text-3,#6b7280);flex:none}
+#yfDlg .yf-x:hover{background:#ef4444;color:#fff;border-color:#ef4444}
+#yfDlg .yf-tb{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 20px;border-bottom:1px solid var(--border,#e5e7eb)}
+#yfDlg .yf-tb select,#yfDlg .yf-tb .yf-q{height:38px;border:1.5px solid var(--border,#d1d5db);border-radius:10px;background:var(--surface,#fff);color:var(--text,#111);padding:0 10px;font-size:14px;box-sizing:border-box}
+#yfDlg .yf-q{display:flex;align-items:center;gap:7px;flex:1 1 220px}
+#yfDlg .yf-q:focus-within{border-color:rgb(var(--ac-600));box-shadow:0 0 0 3px rgb(var(--ac-500) / .2)}
+html body #yfDlg .yf-q input{all:unset;flex:1;min-width:0;font-size:14px;color:var(--text,#111)}
+#yfDlg .yf-seg{display:inline-flex;border:1.5px solid var(--border,#d1d5db);border-radius:10px;overflow:hidden}
+#yfDlg .yf-seg button{all:unset;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text-2,#374151)}
+#yfDlg .yf-seg button.on{background:rgb(var(--ac-600));color:#fff}
+#yfDlg .yf-b{overflow:auto;padding:12px 20px;display:flex;flex-direction:column;gap:12px;min-height:0;-webkit-overflow-scrolling:touch}
+#yfDlg .yf-tw{overflow:auto;border:1px solid var(--border,#e5e7eb);border-radius:12px}
+#yfDlg table{width:100%;border-collapse:collapse;font-size:13.5px;text-align:right}
+#yfDlg th{position:sticky;top:0;background:rgb(var(--ac-600));color:#fff;padding:9px 10px;font-weight:800;white-space:nowrap;z-index:1}
+#yfDlg td{padding:8px 10px;border-top:1px solid var(--border,#e5e7eb);vertical-align:middle}
+#yfDlg tbody tr:nth-child(even) td{background:var(--surface-2,#f8fafc)}
+#yfDlg tbody tr.off td{opacity:.45}
+#yfDlg td.m{white-space:nowrap;font-weight:700;direction:ltr;text-align:right}
+#yfDlg td.n{width:44px;text-align:center;font-weight:800}
+#yfDlg td.c,#yfDlg th.c{width:34px;text-align:center}
+#yfDlg .yf-ov{display:flex;align-items:center;gap:6px;white-space:nowrap}
+html body #yfDlg .yf-ov input{width:70px!important;box-sizing:border-box;padding:5px 7px!important;border:1.5px solid var(--border,#d1d5db)!important;border-radius:8px!important;background:var(--surface,#fff)!important;color:var(--text,#111)!important;font-size:14px!important;text-align:center}
+#yfDlg .yf-ov b{font-size:12.5px;color:rgb(var(--ac-700))}
+html[data-mode=dark] #yfDlg .yf-ov b{color:#fff}
+#yfDlg tfoot td{font-weight:900;background:rgb(var(--ac-600) / .1);border-top:2px solid rgb(var(--ac-400))}
+#yfDlg .yf-e{text-align:center;color:var(--text-3,#9ca3af);padding:24px}
+#yfDlg .yf-nf{display:grid;grid-template-columns:1fr 280px;gap:14px}
+@media (max-width:700px){#yfDlg .yf-nf{grid-template-columns:1fr}}
+#yfDlg .yf-nf label{display:block;font-size:13px;font-weight:800;margin-bottom:5px}
+html body #yfDlg .yf-nf textarea,html body #yfDlg .yf-nf input{width:100%!important;box-sizing:border-box;border:1.5px solid var(--border,#d1d5db)!important;border-radius:10px!important;padding:9px 11px!important;background:var(--surface,#fff)!important;color:var(--text,#111)!important;font-size:14px!important}
+#yfDlg .yf-nf textarea{min-height:84px;resize:vertical}
+#yfDlg .yf-tip{font-size:12px;color:var(--text-3,#6b7280)}
+#yfDlg .yf-f{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border,#e5e7eb);background:var(--surface-2,#f8fafc)}
+#yfDlg .yf-f .sp{flex:1}
+#yfDlg .yf-f button{all:unset;display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer}
+#yfDlg .yf-f button.yf-pdf{background:#dc2626;color:#fff}
+#yfDlg .yf-f button.yf-pdf:hover{background:#b91c1c}
+#yfDlg .yf-f button.yf-cl{background:var(--surface,#fff);border:1.5px solid var(--border,#d1d5db);color:var(--text,#111)}
+.yf-open-btn{background:#0d9488;color:#fff}
+.yf-open-btn:hover{background:#0f766e}
+</style>
+<div id="yfDlg" hidden role="dialog" aria-modal="true" aria-labelledby="yfTtl" data-lenis-prevent><div class="yf" dir="rtl" id="yfBox"></div></div>
+<script id="yfJs">
+/* ===== כספים וחוזים ← חשבונות: כפתור "חשבונות יפתח" – טבלה עם תקורה וייצוא PDF (הערות + גורם מאשר) ===== */
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const dk = v => String(v == null ? '' : v).replace(/\s+/g, '').replace(/["'׳״]/g, '');
+const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
+const M = n => { try { return fMoney(n); } catch (e) { return '₪' + r2(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } };
+const note = m => { try { showNotification(m); } catch (e) { } };
+const ENT = 'יפתח';
+const isYf = r => dk(r.entity).includes(ENT);
+const before = r => { try { return r2(blVatBase(r)); } catch (e) { return r2(r.amount); } };
+const incl = r => { try { return r2(blPay(r)); } catch (e) { return r2(r.amount); } };
+/* תקורה: המספר שנרשם × המחיר כולל מע"מ. מספר 1 ומעלה = אחוז (5 = 5%); מספר קטן מ-1 = מכפיל (0.05) */
+const ovNum = r => (r.yfOvh === '' || r.yfOvh == null || isNaN(Number(r.yfOvh))) ? null : Number(r.yfOvh);
+const ovAmt = r => { const n = ovNum(r); if (n == null) return null; return r2(incl(r) * (n >= 1 ? n / 100 : n)); };
+const ovLbl = n => n == null ? '' : (n >= 1 ? n + '%' : '×' + n);
+const S = () => { const o = BL(); o.yf = (o.yf && typeof o.yf === 'object') ? o.yf : {}; return o.yf; };
+const canE = () => { try { return can('bill_edit'); } catch (e) { return true; } };
+let st = { y: null, f: 'all', q: '', off: new Set() };
+
+function rows() {
+  return BL().rows.filter(r => isYf(r) && Number(r.year) === Number(st.y))
+    .filter(r => st.f === 'all' ? true : st.f === 'appr' ? !!r.approvalDate : !r.approvalDate)
+    .filter(r => { const q = st.q.trim(); return !q || [r.txAcc, r.desc, r.billNo, r.contract].join(' ').includes(q); })
+    .sort((a, b) => String(a.billNo || '').localeCompare(String(b.billNo || ''), 'he', { numeric: true }));
+}
+function years() { const s = new Set(BL().rows.filter(isYf).map(r => Number(r.year)).filter(Boolean)); s.add(Number(blY) || new Date().getFullYear()); return [...s].sort((a, b) => b - a); }
+function draw() {
+  const L = rows(), ed = canE(), on = L.filter(r => !st.off.has(r.id));
+  const tB = on.reduce((a, r) => a + before(r), 0), tI = on.reduce((a, r) => a + incl(r), 0), tO = on.reduce((a, r) => a + (ovAmt(r) || 0), 0);
+  const anyO = on.some(r => ovNum(r) != null), all = L.length && L.every(r => !st.off.has(r.id));
+  const cfg = S();
+  $('yfBox').innerHTML = `<div class="yf-h"><i class="fa-solid fa-file-invoice-dollar"></i><span class="yf-ht" id="yfTtl">חשבונות יפתח<small>כל החשבונות שהגורם שלהם "יפתח" · שנה ${E(st.y)}</small></span><button type="button" class="yf-x" data-yf="x" title="סגירה" aria-label="סגירה"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="yf-tb"><select data-yf="y" aria-label="שנה">${years().map(y => `<option ${y === Number(st.y) ? 'selected' : ''}>${y}</option>`).join('')}</select>
+      <span class="yf-seg">${[['all', 'הכל'], ['open', 'פתוחים'], ['appr', 'מאושרים']].map(([k, l]) => `<button type="button" data-yf="f" data-v="${k}" class="${st.f === k ? 'on' : ''}">${l}</button>`).join('')}</span>
+      <label class="yf-q"><i class="fa-solid fa-magnifying-glass"></i><input data-yf="q" value="${E(st.q)}" placeholder="חיפוש חשבונית עסקה / תיאור..."></label></div>
+    <div class="yf-b">
+      ${L.length ? `<div class="yf-tw"><table><thead><tr><th class="c"><input type="checkbox" data-yf="all" ${all ? 'checked' : ''} title="סימון הכל לייצוא"></th><th>מספור</th><th>חשבונית עסקה</th><th>תיאור</th><th>תקורה</th><th>מחיר לפני מע"מ</th><th>מחיר כולל מע"מ</th></tr></thead>
+      <tbody>${L.map((r, i) => { const n = ovNum(r), a = ovAmt(r), off = st.off.has(r.id); return `<tr class="${off ? 'off' : ''}"><td class="c"><input type="checkbox" data-yf="ck" data-id="${E(r.id)}" ${off ? '' : 'checked'} title="לכלול בייצוא"></td><td class="n">${i + 1}</td><td><b>${E(r.txAcc || '-')}</b></td><td>${E(r.desc || '-')}</td>
+        <td><span class="yf-ov"><input type="number" step="any" min="0" data-yf="ov" data-id="${E(r.id)}" value="${n == null ? '' : n}" placeholder="—" ${ed ? '' : 'disabled'} title="מספר לחישוב התקורה (5 = 5%, או מכפיל כמו 0.05)"><b>${a == null ? '' : M(a)}</b></span></td>
+        <td class="m">${M(before(r))}</td><td class="m">${M(incl(r))}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td></td><td colspan="3">סה"כ (${on.length} שורות מסומנות)</td><td class="m">${anyO ? M(tO) : '—'}</td><td class="m">${M(tB)}</td><td class="m">${M(tI)}</td></tr></tfoot></table></div>` : `<div class="yf-e">אין חשבונות של הגורם "יפתח" ${st.f === 'appr' ? 'מאושרים ' : st.f === 'open' ? 'פתוחים ' : ''}בשנה ${E(st.y)}</div>`}
+      <div class="yf-tip">תקורה = המספר שתרשום × המחיר כולל מע"מ (5 = 5%, או מכפיל כמו 0.05). אם לא נרשמה תקורה באף שורה – העמודה לא תופיע ב-PDF.</div>
+      <div class="yf-nf"><div><label for="yfNotes">הערות (יופיעו מתחת לטבלה)</label><textarea id="yfNotes" data-yf="notes" ${ed ? '' : 'disabled'}>${E(cfg.notes || '')}</textarea></div>
+        <div><label for="yfAppr">גורם מאשר (בצד שמאל, מתחת לטבלה)</label><input id="yfAppr" data-yf="appr" value="${E(cfg.appr || '')}" placeholder="שם ותפקיד" ${ed ? '' : 'disabled'}></div></div>
+    </div>
+    <div class="yf-f"><button type="button" class="yf-pdf" data-yf="pdf"><i class="fa-solid fa-file-pdf"></i> ייצוא ל-PDF</button><span class="sp"></span><button type="button" class="yf-cl" data-yf="x">סגור</button></div>`;
+}
+function open() { st = { y: Number(blY) || new Date().getFullYear(), f: 'all', q: '', off: new Set() }; draw(); $('yfDlg').hidden = false; }
+const close = () => { $('yfDlg').hidden = true; };
+let tSave = 0; const saveLater = () => { clearTimeout(tSave); tSave = setTimeout(() => { try { saveData(); } catch (e) { } }, 500); };
+const box = $('yfBox');
+box.addEventListener('click', e => {
+  const t = e.target.closest('[data-yf]'); if (!t) return; const a = t.dataset.yf;
+  if (a === 'x') close();
+  else if (a === 'f') { st.f = t.dataset.v; draw(); }
+  else if (a === 'pdf') exportPdf();
+});
+box.addEventListener('change', e => {
+  const t = e.target, a = t.dataset.yf;
+  if (a === 'y') { st.y = Number(t.value); st.off.clear(); draw(); }
+  else if (a === 'ck') { t.checked ? st.off.delete(t.dataset.id) : st.off.add(t.dataset.id); draw(); }
+  else if (a === 'all') { rows().forEach(r => t.checked ? st.off.delete(r.id) : st.off.add(r.id)); draw(); }
+  else if (a === 'ov') { const r = BL().rows.find(x => x.id === t.dataset.id); if (!r) return; r.yfOvh = t.value === '' ? '' : Number(t.value); saveData(); const pos = t.dataset.id; draw(); const n = box.querySelector(`[data-yf="ov"][data-id="${CSS.escape(pos)}"]`); if (n) n.focus(); }
+});
+box.addEventListener('input', e => {
+  const t = e.target, a = t.dataset.yf;
+  if (a === 'q') { st.q = t.value; const p = t.selectionStart; draw(); const n = box.querySelector('[data-yf="q"]'); if (n) { n.focus(); try { n.setSelectionRange(p, p); } catch (x) { } } }
+  else if (a === 'notes') { S().notes = t.value; saveLater(); }
+  else if (a === 'appr') { S().appr = t.value; saveLater(); }
+});
+$('yfDlg').addEventListener('click', e => { if (e.target.id === 'yfDlg') close(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('yfDlg').hidden) { e.stopPropagation(); close(); } }, true);
+
+function exportPdf() {
+  const L = rows().filter(r => !st.off.has(r.id)); if (!L.length) return note('ℹ️ אין שורות מסומנות לייצוא');
+  const anyO = L.some(r => ovNum(r) != null), cfg = S();
+  const td = 'border:1px solid #94a3b8;padding:6px 8px', th = td + ';background:#0f2742;color:#fff;font-weight:700';
+  const tB = L.reduce((a, r) => a + before(r), 0), tI = L.reduce((a, r) => a + incl(r), 0), tO = L.reduce((a, r) => a + (ovAmt(r) || 0), 0);
+  const heads = ['מספור', 'חשבונית עסקה', 'תיאור'].concat(anyO ? ['תקורה'] : []).concat(['מחיר לפני מע"מ', 'מחיר כולל מע"מ']);
+  const mm = v => `<td style="${td};direction:ltr;text-align:right;white-space:nowrap">${M(v)}</td>`;
+  const el = document.createElement('div'); el.dir = 'rtl'; el.style.cssText = 'font-family:Assistant,Arial,sans-serif;color:#111827;font-size:12px';
+  el.innerHTML = `<h2 style="margin:0 0 4px;font-size:20px">חשבונות יפתח – ${E(st.y)}</h2><div style="color:#475569;margin-bottom:12px">תאריך הפקה: ${new Date().toLocaleDateString('he-IL')}</div>
+    <table style="border-collapse:collapse;width:100%"><thead><tr>${heads.map(h => `<th style="${th}">${h}</th>`).join('')}</tr></thead><tbody>
+    ${L.map((r, i) => `<tr${i % 2 ? ' style="background:#f1f5f9"' : ''}><td style="${td};text-align:center">${i + 1}</td><td style="${td}">${E(r.txAcc || '-')}</td><td style="${td}">${E(r.desc || '-')}</td>${anyO ? (ovNum(r) == null ? `<td style="${td};text-align:center">—</td>` : `<td style="${td};direction:ltr;text-align:right;white-space:nowrap">${M(ovAmt(r))} <span style="color:#64748b">(${ovLbl(ovNum(r))})</span></td>`) : ''}${mm(before(r))}${mm(incl(r))}</tr>`).join('')}
+    <tr style="background:#dbeafe;font-weight:700"><td style="${td}" colspan="3">סה"כ</td>${anyO ? mm(tO) : ''}${mm(tB)}${mm(tI)}</tr></tbody></table>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:30px;margin-top:22px">
+      <div style="flex:1"><div style="font-weight:700;margin-bottom:6px">הערות:</div>${(cfg.notes || '').trim() ? `<div style="white-space:pre-wrap;line-height:1.6">${E(cfg.notes.trim())}</div>` : '<div style="border-bottom:1px solid #94a3b8;height:22px"></div><div style="border-bottom:1px solid #94a3b8;height:22px"></div>'}</div>
+      <div style="width:240px;text-align:right"><div style="font-weight:700;margin-bottom:6px">גורם מאשר:</div><div style="min-height:20px">${E(cfg.appr || '')}</div><div style="margin-top:22px">חתימה: ____________________</div><div style="margin-top:12px">תאריך: ____________________</div></div>
+    </div>`;
+  const fn = `חשבונות_יפתח_${st.y}.pdf`;
+  try { if (typeof pdfRender === 'function') pdfRender(el, { filename: fn }); else html2pdf().set({ margin: 10, filename: fn, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } }).from(el).save(); try { addLog('ייצוא PDF – חשבונות יפתח ' + st.y); } catch (e) { } } catch (e) { note('⚠️ ייצוא PDF נכשל'); }
+}
+/* כפתור בלשונית חשבונות, ליד "הוסף חשבון" */
+function addBtn() {
+  const body = $('blBody'); if (!body || body.querySelector('.yf-open-btn')) return;
+  const add = body.querySelector('button[onclick="blRowModal()"]') || body.querySelector('button[onclick^="blTColModal"]'); if (!add) return;
+  add.insertAdjacentHTML('afterend', '<button type="button" class="yf-open-btn px-4 py-2 rounded-lg text-sm font-semibold" title="טבלת חשבונות של הגורם יפתח עם תקורה וייצוא PDF"><i class="fa-solid fa-file-invoice-dollar ml-1"></i> חשבונות יפתח</button>');
+}
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.yf-open-btn')) { e.preventDefault(); open(); } });
+const _rb = window.renderBills;
+if (typeof _rb === 'function') window.renderBills = function () { const r = _rb.apply(this, arguments); try { addBtn(); } catch (e) { } return r; };
+const bb = $('blBody'); if (bb) new MutationObserver(() => { try { addBtn(); } catch (e) { } }).observe(bb, { childList: true });
+addBtn();
+window.yfOpen = open;
+})();
+</script>
+
 </body>
 </html>
