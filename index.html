@@ -29286,13 +29286,18 @@ html[data-mode=dark] #yfDlg .yf-sb:hover{color:#fff}
 html body #yfDlg td input.yf-in{width:100%!important;min-width:90px;box-sizing:border-box;padding:7px 9px!important;border:1.5px solid var(--border,#d1d5db)!important;border-radius:8px!important;background:var(--surface,#fff)!important;color:var(--text,#111)!important;font-size:14px!important;margin:0!important}
 html body #yfDlg td input.yf-in:focus{border-color:rgb(var(--ac-600))!important;box-shadow:0 0 0 3px rgb(var(--ac-500) / .2)!important;outline:0}
 html body #yfDlg td input.yf-in[data-k=amt]{direction:ltr;text-align:right;font-weight:700}
-#yfDlg td.w-date{width:150px}#yfDlg td.w-inv{width:170px}#yfDlg td.w-amt{width:160px}
+#yfDlg td.w-desc{min-width:180px}#yfDlg td.w-date{width:150px}#yfDlg td.w-inv{width:170px}#yfDlg td.w-amt{width:160px}
 #yfDlg .yf-rx{all:unset;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;cursor:pointer;color:var(--text-3,#9ca3af)}
 #yfDlg .yf-rx:hover{background:#ef4444;color:#fff}
 #yfDlg .yf-addr{all:unset;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;border:2px dashed var(--border,#d1d5db);border-radius:10px;font-weight:800;font-size:13.5px;cursor:pointer;color:rgb(var(--ac-700))}
 #yfDlg .yf-addr:hover{border-color:rgb(var(--ac-500));background:rgb(var(--ac-500) / .07)}
 html[data-mode=dark] #yfDlg .yf-addr{color:#fff}
-#yfDlg .yf-sum{align-self:flex-start;width:100%;max-width:460px;border:1px solid var(--border,#e5e7eb);border-radius:12px;overflow:hidden}
+#yfDlg .yf-sum{display:flex;flex-wrap:wrap;gap:8px}
+#yfDlg .yf-sum .yf-sr{border:1px solid var(--border,#e5e7eb);border-radius:10px;padding:7px 12px}
+#yfDlg td.cm{white-space:nowrap;font-weight:700;direction:ltr;text-align:right}
+#yfDlg td.cm.tot{font-weight:900;color:rgb(var(--ac-700))}
+html[data-mode=dark] #yfDlg td.cm.tot{color:#fff}
+#yfDlg td.cm.mute{color:var(--text-3,#9ca3af)}
 #yfDlg .yf-sr{display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid var(--border,#e5e7eb);font-size:14px;flex-wrap:wrap}
 #yfDlg .yf-sr:first-child{border-top:0}
 #yfDlg .yf-sr .l{flex:1;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -29357,6 +29362,10 @@ function newSheet(name) {
 function cur() { const d = D(); let s = d.sheets.find(x => x.id === d.cur) || d.sheets[d.sheets.length - 1]; if (!s) s = newSheet(); d.cur = s.id; if (!Array.isArray(s.rows)) s.rows = []; return s; }
 const ovN = s => (s.ovh === '' || s.ovh == null || isNaN(Number(s.ovh)) || Number(s.ovh) === 0) ? null : Number(s.ovh);
 const filled = r => String(r.inv || '').trim() || String(r.desc || '').trim() || String(r.amt == null ? '' : r.amt).trim() !== '';
+function rc(s, r) {
+  const amt = r2(num(r.amt)), vat = r2(amt * (Number(s.vat) || 0) / 100), after = r2(amt + vat), op = ovN(s), ovh = op == null ? null : r2(after * op / 100);
+  return { amt, vat, after, ovh, total: r2(after + (ovh || 0)) };
+}
 function calc(s) {
   const before = r2(s.rows.reduce((a, r) => a + num(r.amt), 0));
   const vp = Number(s.vat) || 0, vat = r2(before * vp / 100), after = r2(before + vat);
@@ -29369,12 +29378,11 @@ const saveNow = () => { clearTimeout(tSave); try { saveData(); } catch (e) { } }
 
 function sumHtml(s, ed) {
   const c = calc(s);
-  return `<div class="yf-sr"><span class="l">לפני מע"מ</span><span class="v" data-yfv="before">${M(c.before)}</span></div>
-    <div class="yf-sr"><span class="l">מע"מ (<span data-yfv="vp">${c.vp}</span>%)${ed ? '<button type="button" class="yf-mini" data-yf="vatdef" title="שינוי אחוז המע&quot;מ – נשמר כברירת מחדל לכל הטבלאות">שנה ברירת מחדל</button>' : ''}</span><span class="v" data-yfv="vat">${M(c.vat)}</span></div>
-    <div class="yf-sr${c.op == null ? ' mute' : ''}" data-yfv="ovrow"><span class="l">תקורה <input type="number" step="any" min="0" class="yf-pc" data-yf="ovh" value="${c.op == null ? '' : c.op}" placeholder="—" ${ed ? '' : 'disabled'} title="אחוז תקורה (× הסכום אחרי מע&quot;מ)">%
-      ${ed ? '<button type="button" class="yf-mini" data-yf="ovdef" title="לשמור את האחוז הנוכחי כברירת מחדל לטבלאות חדשות">קבע כברירת מחדל</button>' : ''}</span><span class="v" data-yfv="ovh">${c.ovh == null ? 'ללא' : M(c.ovh)}</span></div>
-    <div class="yf-sr tot"><span class="l">סכום כולל מע"מ<small data-yfv="totlbl" style="font-weight:600;font-size:12px">${c.ovh == null ? '' : ' (כולל תקורה)'}</small></span><span class="v" data-yfv="total">${M(c.total)}</span></div>`;
+  return `<div class="yf-sr"><span class="l">מע"מ (<span data-yfv="vp">${c.vp}</span>%)${ed ? '<button type="button" class="yf-mini" data-yf="vatdef" title="שינוי אחוז המע&quot;מ – נשמר כברירת מחדל לכל הטבלאות">שנה ברירת מחדל</button>' : ''}</span></div>
+    <div class="yf-sr"><span class="l">תקורה <input type="number" step="any" min="0" class="yf-pc" data-yf="ovh" value="${c.op == null ? '' : c.op}" placeholder="—" ${ed ? '' : 'disabled'} title="אחוז תקורה (× הסכום אחרי מע&quot;מ)">%
+      ${ed ? '<button type="button" class="yf-mini" data-yf="ovdef" title="לשמור את האחוז הנוכחי כברירת מחדל לטבלאות חדשות">קבע כברירת מחדל</button>' : ''}</span></div>`;
 }
+function cells(s, r) { const c = rc(s, r); return `<td class="cm" data-c="vat">${M(c.vat)}</td><td class="cm${c.ovh == null ? ' mute' : ''}" data-c="ovh">${c.ovh == null ? '—' : M(c.ovh)}</td><td class="cm tot" data-c="total">${M(c.total)}</td>`; }
 function draw(focus) {
   const d = D(), s = cur(), ed = canE();
   $('yfBox').innerHTML = `<div class="yf-h"><i class="fa-solid fa-file-invoice-dollar"></i><span class="yf-ht" id="yfTtl">חשבונות יפתח<small>טבלה למילוי · ${E(s.name)}</small></span><button type="button" class="yf-x" data-yf="x" title="סגירה" aria-label="סגירה"><i class="fa-solid fa-xmark"></i></button></div>
@@ -29383,16 +29391,17 @@ function draw(focus) {
       <button type="button" class="yf-sb" data-yf="ren"><i class="fa-solid fa-pen"></i> שינוי שם</button>
       <button type="button" class="yf-sb dl" data-yf="del"><i class="fa-solid fa-trash"></i> מחיקת טבלה</button>` : ''}</div>
     <div class="yf-b">
-      <div class="yf-tw"><table><thead><tr><th style="text-align:center">מספור</th><th>תאריך</th><th>חשבונית עסקה</th><th>תיאור</th><th>סכום חשבון</th>${ed ? '<th></th>' : ''}</tr></thead>
+      <div class="yf-sum" id="yfSum">${sumHtml(s, ed)}</div>
+      <div class="yf-tw"><table><thead><tr><th style="text-align:center">מספור</th><th>תאריך</th><th>חשבונית עסקה</th><th>תיאור</th><th>סכום חשבון</th><th>מע"מ (${calc(s).vp}%)</th><th>תקורה${ovN(s) == null ? '' : ' (' + ovN(s) + '%)'}</th><th>סכום כולל מע"מ</th>${ed ? '<th></th>' : ''}</tr></thead>
       <tbody>${s.rows.map((r, i) => `<tr data-id="${E(r.id)}"><td class="n">${i + 1}</td>
         <td class="w-date"><input class="yf-in" type="date" data-k="date" value="${E(r.date || '')}" ${ed ? '' : 'disabled'}></td>
         <td class="w-inv"><input class="yf-in" data-k="inv" value="${E(r.inv || '')}" placeholder="מספר חשבונית" ${ed ? '' : 'disabled'}></td>
-        <td><input class="yf-in" data-k="desc" value="${E(r.desc || '')}" placeholder="תיאור" ${ed ? '' : 'disabled'}></td>
+        <td class="w-desc"><input class="yf-in" data-k="desc" value="${E(r.desc || '')}" placeholder="תיאור" ${ed ? '' : 'disabled'}></td>
         <td class="w-amt"><input class="yf-in" type="number" step="any" inputmode="decimal" data-k="amt" value="${E(r.amt == null ? '' : r.amt)}" placeholder="0.00" ${ed ? '' : 'disabled'}></td>
+        ${cells(s, r)}
         ${ed ? `<td class="d"><button type="button" class="yf-rx" data-yf="rx" title="מחיקת שורה" aria-label="מחיקת שורה"><i class="fa-solid fa-trash-can"></i></button></td>` : ''}</tr>`).join('')}</tbody></table></div>
       ${ed ? '<button type="button" class="yf-addr" data-yf="add"><i class="fa-solid fa-plus"></i> הוספת שורה</button>' : ''}
-      <div class="yf-sum" id="yfSum">${sumHtml(s, ed)}</div>
-      <div class="yf-tip">סכום החשבון נרשם לפני מע"מ. תקורה = האחוז שתזין × הסכום אחרי מע"מ (ומתווספת לסכום הכולל). אם אין תקורה – השורה לא תופיע ב-PDF. Enter בשדה הסכום מוסיף שורה חדשה.</div>
+      <div class="yf-tip">סכום החשבון נרשם לפני מע"מ. בכל שורה מחושבים מע"מ, תקורה (האחוז שתזין × הסכום אחרי מע"מ) וסכום כולל מע"מ (כולל התקורה). אם אין תקורה – העמודה לא תופיע ב-PDF. Enter בשדה הסכום מוסיף שורה חדשה.</div>
       <div class="yf-nf"><div><label for="yfNotes">הערות (יופיעו מתחת לטבלה)</label><textarea id="yfNotes" data-yf="notes" ${ed ? '' : 'disabled'}>${E(s.notes || '')}</textarea></div>
         <div><label for="yfAppr">גורם מאשר (בצד שמאל)</label><input id="yfAppr" data-yf="appr" value="${E(s.appr || '')}" placeholder="שם ותפקיד" ${ed ? '' : 'disabled'}></div></div>
     </div>
@@ -29400,11 +29409,10 @@ function draw(focus) {
   if (focus) { const n = $('yfBox').querySelector(focus); if (n) { n.focus(); try { n.scrollIntoView({ block: 'nearest' }); } catch (e) { } } }
 }
 function refreshSum() {
-  const s = cur(), c = calc(s), b = $('yfBox'), q = k => b.querySelector(`[data-yfv="${k}"]`);
-  if (!q('before')) return;
-  q('before').textContent = M(c.before); q('vp').textContent = c.vp; q('vat').textContent = M(c.vat);
-  q('ovh').textContent = c.ovh == null ? 'ללא' : M(c.ovh); q('ovrow').classList.toggle('mute', c.ovh == null);
-  q('total').textContent = M(c.total); q('totlbl').textContent = c.ovh == null ? '' : ' (כולל תקורה)';
+  const s = cur(), b = $('yfBox'), vp = b.querySelector('[data-yfv="vp"]'); if (vp) vp.textContent = calc(s).vp;
+  const ths = b.querySelectorAll('thead th'); if (ths[5]) ths[5].textContent = `מע"מ (${calc(s).vp}%)`; if (ths[6]) ths[6].textContent = 'תקורה' + (ovN(s) == null ? '' : ' (' + ovN(s) + '%)');
+  b.querySelectorAll('tbody tr[data-id]').forEach(tr => { const r = s.rows.find(x => x.id === tr.dataset.id); if (!r) return; const c = rc(s, r);
+    tr.querySelector('[data-c="vat"]').textContent = M(c.vat); const o = tr.querySelector('[data-c="ovh"]'); o.textContent = c.ovh == null ? '—' : M(c.ovh); o.classList.toggle('mute', c.ovh == null); tr.querySelector('[data-c="total"]').textContent = M(c.total); });
 }
 function addRow() { const s = cur(), last = s.rows[s.rows.length - 1]; const r = { id: uid(), date: (last && last.date) || today(), inv: '', desc: '', amt: '' }; s.rows.push(r); saveNow(); draw(`tr[data-id="${r.id}"] [data-k="inv"]`); }
 
@@ -29457,21 +29465,17 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('yfDlg'
 function exportPdf() {
   saveNow();
   const s = cur(), L = s.rows.filter(filled); if (!L.length) return note('ℹ️ אין שורות מלאות לייצוא');
-  const c = calc(s);
+  const c = calc(s), hasO = c.op != null;
   const td = 'border:1px solid #94a3b8;padding:6px 8px', th = td + ';background:#0f2742;color:#fff;font-weight:700;text-align:right';
   const mm = v => `<td style="${td};direction:ltr;text-align:right;white-space:nowrap">${M(v)}</td>`;
-  const sr = (l, v, st) => `<tr style="${st || ''}"><td style="${td};font-weight:700">${l}</td>${mm(v)}</tr>`;
   const el = document.createElement('div'); el.dir = 'rtl'; el.style.cssText = 'font-family:Assistant,Arial,sans-serif;color:#111827;font-size:12px';
   el.innerHTML = `<h2 style="margin:0 0 4px;font-size:20px">${E(s.name)}</h2><div style="color:#475569;margin-bottom:12px">תאריך הפקה: ${new Date().toLocaleDateString('he-IL')}</div>
-    <table style="border-collapse:collapse;width:100%"><thead><tr>${['מספור', 'תאריך', 'חשבונית עסקה', 'תיאור', 'סכום חשבון'].map(h => `<th style="${th}">${h}</th>`).join('')}</tr></thead><tbody>
-    ${L.map((r, i) => `<tr${i % 2 ? ' style="background:#f1f5f9"' : ''}><td style="${td};text-align:center">${i + 1}</td><td style="${td};white-space:nowrap">${E(dFmt(r.date))}</td><td style="${td}">${E(r.inv || '')}</td><td style="${td}">${E(r.desc || '')}</td>${mm(num(r.amt))}</tr>`).join('')}
-    </tbody></table>
-    <table style="border-collapse:collapse;width:320px;margin-top:10px;margin-right:auto"><tbody>
-      ${sr('לפני מע"מ', c.before)}${sr(`מע"מ (${c.vp}%)`, c.vat)}${c.ovh == null ? '' : sr(`תקורה (${c.op}%)`, c.ovh)}${sr('סכום כולל מע"מ', c.total, 'background:#dbeafe;font-weight:700')}
+    <table style="border-collapse:collapse;width:100%"><thead><tr>${['מספור', 'תאריך', 'חשבונית עסקה', 'תיאור', 'סכום חשבון', `מע"מ (${c.vp}%)`].concat(hasO ? [`תקורה (${c.op}%)`] : []).concat(['סכום כולל מע"מ']).map(h => `<th style="${th}">${h}</th>`).join('')}</tr></thead><tbody>
+    ${L.map((r, i) => `<tr${i % 2 ? ' style="background:#f1f5f9"' : ''}><td style="${td};text-align:center">${i + 1}</td><td style="${td};white-space:nowrap">${E(dFmt(r.date))}</td><td style="${td}">${E(r.inv || '')}</td><td style="${td}">${E(r.desc || '')}</td>${(() => { const x = rc(s, r); return mm(x.amt) + mm(x.vat) + (hasO ? mm(x.ovh) : '') + mm(x.total); })()}</tr>`).join('')}
     </tbody></table>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:30px;margin-top:22px">
       <div style="flex:1"><div style="font-weight:700;margin-bottom:6px">הערות:</div>${(s.notes || '').trim() ? `<div style="white-space:pre-wrap;line-height:1.6">${E(s.notes.trim())}</div>` : '<div style="border-bottom:1px solid #94a3b8;height:22px"></div><div style="border-bottom:1px solid #94a3b8;height:22px"></div>'}</div>
-      <div style="width:240px;text-align:right"><div style="font-weight:700;margin-bottom:6px">גורם מאשר:</div><div style="min-height:20px">${E(s.appr || '')}</div><div style="margin-top:22px">חתימה: ____________________</div><div style="margin-top:12px">תאריך: ____________________</div></div>
+      <div style="width:240px;text-align:right"><div style="font-weight:700;margin-bottom:6px">גורם מאשר:</div><div style="min-height:20px">${E(s.appr || '')}</div><div style="margin-top:22px">חתימה: ____________________</div></div>
     </div>`;
   const fn = (s.name || 'חשבונות_יפתח').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '_') + '.pdf';
   try { if (typeof pdfRender === 'function') pdfRender(el, { filename: fn, onePage: true }); else html2pdf().set({ margin: 10, filename: fn, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } }).from(el).save(); try { addLog('ייצוא PDF – ' + s.name); } catch (e) { } } catch (e) { note('⚠️ ייצוא PDF נכשל'); }
