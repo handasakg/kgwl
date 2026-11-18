@@ -28923,5 +28923,98 @@ if (typeof _sf === 'function') {
 })();
 </script>
 
+
+<style id="dlgScrollCss">
+/* ===== גלילה בכל חלון קופץ – עכבר ומגע ===== */
+.fixed.inset-0.flex.items-center:not(.hidden){overflow-y:auto!important;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y pinch-zoom;align-items:flex-start!important}
+.fixed.inset-0.flex.items-center:not(.hidden)>*{margin-top:auto!important;margin-bottom:auto!important;flex-shrink:0}
+.fixed.inset-0 .overflow-y-auto,.fixed.inset-0 .overflow-auto,[role=dialog] .overflow-y-auto,[role=dialog] .overflow-auto{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y pinch-zoom}
+@supports (height:1dvh){
+  .max-h-\[88vh\]{max-height:88dvh!important}.max-h-\[90vh\]{max-height:90dvh!important}.max-h-\[92vh\]{max-height:92dvh!important}.max-h-\[94vh\]{max-height:94dvh!important}
+  #ctxPick .cx,#ctsDet .csd{max-height:90dvh!important}
+}
+#ctxPick,#ctsDet{overflow-y:auto;overscroll-behavior:contain}
+#ctxPick .cx-l,#ctsDet .csd-b{overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y pinch-zoom;min-height:0}
+@media (max-width:640px){
+  #ctxPick,#ctsDet{padding:8px!important;align-items:flex-start!important}
+  #ctxPick .cx,#ctsDet .csd{margin:auto 0;max-height:calc(100dvh - 16px)!important}
+}
+
+/* ===== מסגרת אחידה סביב כל תיבת החיפוש בלשוניות ===== */
+.srch-box{position:relative!important;display:inline-flex!important;align-items:center!important;gap:7px!important;box-sizing:border-box!important;min-height:36px;padding:0 11px!important;border:1.5px solid var(--border,#d1d5db)!important;border-radius:10px!important;background:var(--surface,#fff)!important;color:var(--text,#111);transition:border-color .15s,box-shadow .15s;vertical-align:middle;max-width:100%}
+.srch-box:hover{border-color:rgb(var(--ac-400))!important}
+.srch-box:focus-within{border-color:rgb(var(--ac-600))!important;box-shadow:0 0 0 3px rgb(var(--ac-500) / .2)!important}
+.srch-box>i.srch-ic,.srch-box>i.fa-search,.srch-box>i.fa-magnifying-glass{position:static!important;inset:auto!important;transform:none!important;margin:0!important;flex:none;order:-1;font-size:13px!important;color:var(--text-3,#9ca3af)!important;pointer-events:none}
+.srch-box:focus-within>i.srch-ic,.srch-box:focus-within>i.fa-search,.srch-box:focus-within>i.fa-magnifying-glass{color:rgb(var(--ac-600))!important}
+html .srch-box>input.srch-in{border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important;margin:0!important;padding:7px 0!important;padding-inline:0!important;flex:1 1 auto;min-width:0;height:auto!important;color:inherit!important;-webkit-appearance:none;appearance:none}
+html .srch-box>input.srch-in::-webkit-search-decoration{-webkit-appearance:none}
+.srch-box.srch-full{display:flex!important;width:100%!important}
+</style>
+<script id="dlgScrollJs">
+/* גלילה בחלונות קופצים (גם כשהגלילה החלקה Lenis פעילה) + מסגרת חיפוש אחידה בלשוניות */
+(function () {
+'use strict';
+/* ---------- 1. גלילה בכל חלון קופץ ---------- */
+const DLG = '[role=dialog],[aria-modal=true],.fixed.inset-0,#ctxPick,#ctsDet,#udlg,#subPick,.sum-ov,#roDlg,#bcPick';
+const isOpen = el => { if (!el || el.hidden || el.classList.contains('hidden')) return false; const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || cs.position !== 'fixed' || cs.pointerEvents === 'none' || Number(cs.opacity) < 0.05 || (parseInt(cs.zIndex, 10) || 0) < 30) return false; const r = el.getBoundingClientRect(); return r.width >= innerWidth * 0.6 && r.height >= innerHeight * 0.6; };
+function mark() {
+  document.querySelectorAll(DLG).forEach(el => { if (!el.hasAttribute('data-lenis-prevent')) el.setAttribute('data-lenis-prevent', ''); });
+  [...document.body.children].forEach(el => {
+    if (el.hasAttribute('data-lenis-prevent') || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
+    const cs = getComputedStyle(el); if (cs.position !== 'fixed' || cs.display === 'none') return;
+    const z = parseInt(cs.zIndex, 10) || 0, r = el.getBoundingClientRect();
+    if (z >= 40 && r.width >= innerWidth * 0.9 && r.height >= innerHeight * 0.9 && cs.pointerEvents !== 'none') el.setAttribute('data-lenis-prevent', '');
+  });
+}
+const anyOpen = () => [...document.querySelectorAll('[data-lenis-prevent]')].some(el => el.id !== 'loginScreen' && el.id !== 'navOverlay' && isOpen(el));
+function lenisGuard() {
+  const L = window.__lenis; if (!L) return;
+  if (!L.__dlgWrap) { const st = L.start.bind(L); L.start = function () { if (anyOpen()) return L.stop(); return st(); }; L.__dlgWrap = 1; }
+  if (anyOpen()) L.stop();
+}
+let t = 0;
+const run = () => { t = 0; try { mark(); lenisGuard(); } catch (e) { } try { srch(); } catch (e) { } };
+const later = () => { if (!t) t = setTimeout(run, 120); };
+new MutationObserver(later).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
+setInterval(() => { try { lenisGuard(); } catch (e) { } }, 500);
+/* גלגלת עכבר בתוך חלון: אם הגלילה הפנימית כבר בקצה – לא מעבירים לעמוד שמאחור */
+document.addEventListener('wheel', e => {
+  const d = e.target.closest && e.target.closest('[data-lenis-prevent]'); if (!d || !isOpen(d)) return;
+  let n = e.target;
+  while (n && n !== d.parentElement) {
+    if (n.nodeType === 1) { const cs = getComputedStyle(n); if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 1) { const up = e.deltaY < 0; if ((up && n.scrollTop > 0) || (!up && n.scrollTop + n.clientHeight < n.scrollHeight - 1)) return; } }
+    n = n.parentElement;
+  }
+  if (e.cancelable) e.preventDefault();
+}, { passive: false });
+
+/* ---------- 2. מסגרת אחידה סביב כל תיבת החיפוש בלשוניות ---------- */
+const QSEL = '.view-content input:is([type=search],[placeholder*="חיפוש"],[placeholder*="🔍"])';
+const isIcon = el => el && el.tagName === 'I' && /fa-search|fa-magnifying-glass/.test(el.className);
+function srch() {
+  document.querySelectorAll(QSEL).forEach(inp => {
+    if (inp.classList.contains('srch-in') || inp.closest('[role=dialog],.fixed.inset-0,#ctxPick,#ctsDet')) return;
+    if (inp.type && !/^(text|search|)$/.test(inp.type)) return;
+    const p = inp.parentElement; if (!p) return;
+    const ctrls = p.querySelectorAll('input,select,textarea,button');
+    const ico = [...p.children].find(isIcon);
+    let box;
+    if (ctrls.length === 1 && ico && p.children.length <= 3 && !p.classList.contains('view-content')) { box = p; }
+    else {
+      box = document.createElement('span');
+      inp.parentNode.insertBefore(box, inp); box.appendChild(inp);
+      const ni = document.createElement('i'); ni.className = 'fa-solid fa-magnifying-glass srch-ic'; ni.setAttribute('aria-hidden', 'true'); box.insertBefore(ni, inp);
+      if (inp.classList.contains('w-full') || inp.style.width === '100%') box.classList.add('srch-full');
+      if (inp.classList.contains('flex-1') || /flex/.test(inp.style.flex || '')) box.style.flex = '1 1 auto';
+    }
+    box.classList.add('srch-box'); inp.classList.add('srch-in');
+    if (!inp.getAttribute('aria-label')) inp.setAttribute('aria-label', (inp.placeholder || 'חיפוש').replace(/^🔍\s*/, ''));
+    if (/^🔍\s*/.test(inp.placeholder || '')) inp.placeholder = inp.placeholder.replace(/^🔍\s*/, '');
+  });
+}
+run();
+})();
+</script>
+
 </body>
 </html>
