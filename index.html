@@ -28130,7 +28130,16 @@ select.ct-st option,#ctFStatus option{background:var(--surface,#fff);color:var(-
 .ctc-sub-det:hover{background:rgb(var(--ac-700))}
 .ctc-mg{font-size:10.5px;font-weight:800;padding:1px 8px;border-radius:999px;background:rgb(var(--ac-600) / .14);color:rgb(var(--ac-700));vertical-align:middle;white-space:nowrap}
 html[data-mode=dark] .ctc-mg{color:#fff}
-.ctc-subs .ctc-sub-b{gap:8px!important}
+.ctc-subs{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.ctc-subs-h{font-size:12px;font-weight:800;color:var(--text-2,#374151);display:flex;align-items:center;gap:6px}
+.ctc-subs-h i{color:#d97706}
+.ctc-sf{margin:0!important}
+.ctc-sf .ctc-sub-tg small{font-weight:600;color:var(--text-3,#6b7280)}
+.ctc-sf .ctc-sub-b{gap:8px!important}
+.ctc-sf-amt .a{font-size:12px}
+.ctc-sf-det{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:9px;background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb)}
+.ctc-sf-det table{width:100%}
+.ctc-sf-det .ctc-act{margin-top:2px}
 .ctc-si{display:flex;flex-direction:column;gap:4px;padding:8px 9px;border-radius:9px;background:var(--surface,#fff);border:1px solid rgb(245 158 11 / .35)}
 .ctc-si-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;font-size:12.5px}
 .ctc-si-h i{color:#d97706}
@@ -28742,22 +28751,33 @@ function cardsSubs() {
   const g = document.querySelector('#ctCards .ctc-grid'); if (!g) return;
   const rows = ctVisible(), cards = [...g.children];
   if (cards.length !== rows.length) return;
-  /* איחוד: כרטיסיה אחת לכל שם חוזה, ובה כל תתי הקטגוריה */
+  /* כרטיסיה אחת לכל שם חוזה; כל שורה עם תת קטגוריה = תיקיה בכרטיס, ובלחיצה עליה מופיע הפירוט המלא של אותה שורה */
   const groups = new Map();
-  rows.forEach((r, i) => { const k = dk(r.name) || ('#' + r.id); if (!groups.has(k)) groups.set(k, []); groups.get(k).push({ r, el: cards[i] }); });
+  rows.forEach((r, i) => {
+    const bd = budOf(r.budId), sb = bd && subFind(bd.id, r.subId);
+    const k = sb ? 'n:' + (dk(r.name) || r.id) : '#' + r.id;
+    if (!groups.has(k)) groups.set(k, []); groups.get(k).push({ r, el: cards[i], b: bd, s: sb });
+  });
+  const DET = ':scope > .ctc-ct, :scope > table, :scope > .ctc-fh, :scope > .ctc-f, :scope > .ctc-last, :scope > .ctc-act';
   groups.forEach(L => {
+    const withSub = L.filter(x => x.s); if (!withSub.length) return;
     const main = L[0].el; if (!main || main.querySelector('.ctc-subs')) return;
+    const det = withSub.map(x => [...x.el.querySelectorAll(DET)].map(n => n.cloneNode(true)));
     L.slice(1).forEach(x => x.el.remove());
-    const seen = new Set(), subs = [];
-    L.forEach(({ r }) => { const bd = budOf(r.budId), sb = bd && subFind(bd.id, r.subId); if (!sb) return; const k = bd.id + '|' + sb.id; if (seen.has(k)) return; seen.add(k); subs.push({ b: bd, s: sb, k, r }); });
+    if (L.length > 1) main.querySelectorAll(DET).forEach(n => n.remove());
     const h4 = main.querySelector('h4');
     if (L.length > 1 && h4 && !h4.querySelector('.ctc-mg')) h4.insertAdjacentHTML('beforeend', ` <span class="ctc-mg" title="שורות בטבלה עם אותו שם חוזה">${L.length} שורות</span>`);
-    if (!subs.length) return;
-    const gk = 'G:' + (dk(L[0].r.name) || L[0].r.id), op = subOpen.has(gk);
-    subs.sort((x, y) => x.s.name.localeCompare(y.s.name, 'he'));
-    const html = `<div class="ctc-subs ctc-sub${op ? '' : ' cl'}"><button type="button" class="ctc-sub-tg" data-cst="${E(gk)}" aria-expanded="${op}" title="פתיחה / מזעור"><i class="fa-solid ${op ? 'fa-folder-open' : 'fa-folder'}"></i><span class="nm">תתי קטגוריה <b>(${subs.length})</b>: ${subs.map(x => E(x.s.name)).join(' · ')}</span><i class="fa-solid fa-chevron-down cv"></i></button>
-      <div class="ctc-sub-b">${subs.map(x => `<div class="ctc-si"><div class="ctc-si-h"><i class="fa-solid fa-folder"></i><b>${E(x.s.name)}</b><span>סעיף ${E(budLbl(x.b))} · ${E(x.b.year)}</span></div>${prjHtml(x.b.id, x.s.id, 'a')}<button type="button" class="ctc-sub-det" data-csd="${E(x.k)}"><i class="fa-solid fa-list-ul"></i> הצג פירוט</button></div>`).join('')}</div></div>`;
-    h4 ? h4.insertAdjacentHTML('afterend', html) : main.insertAdjacentHTML('afterbegin', html);
+    const wrap = document.createElement('div'); wrap.className = 'ctc-subs';
+    wrap.innerHTML = `<div class="ctc-subs-h"><i class="fa-solid fa-folder-tree"></i> תתי קטגוריה <b>(${withSub.length})</b></div>`;
+    withSub.forEach((x, j) => {
+      const key = 'R:' + x.r.id, op = subOpen.has(key);
+      const it = document.createElement('div'); it.className = 'ctc-sub ctc-sf' + (op ? '' : ' cl');
+      it.innerHTML = `<button type="button" class="ctc-sub-tg" data-cst="${E(key)}" aria-expanded="${op}" title="לחץ להצגת הפירוט"><i class="fa-solid ${op ? 'fa-folder-open' : 'fa-folder'}"></i><span class="nm"><b>${E(x.s.name)}</b> <small>· סעיף ${E(budLbl(x.b))}</small></span><i class="fa-solid fa-chevron-down cv"></i></button>
+        <div class="ctc-sub-b"><div class="ctc-sf-amt">${prjHtml(x.b.id, x.s.id, 'a')}</div><div class="ctc-sf-det"></div><button type="button" class="ctc-sub-det" data-csd="${E(x.b.id + '|' + x.s.id)}"><i class="fa-solid fa-list-ul"></i> הצג פירוט</button></div>`;
+      const d = it.querySelector('.ctc-sf-det'); det[j].forEach(n => d.appendChild(n));
+      wrap.appendChild(it);
+    });
+    h4 ? h4.after(wrap) : main.prepend(wrap);
   });
 }
 /* חלון פירוט לשם ספק (תת קטגוריה) */
