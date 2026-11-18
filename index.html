@@ -28128,6 +28128,14 @@ select.ct-st option,#ctFStatus option{background:var(--surface,#fff);color:var(-
 .ctc-sub.cl .ctc-sub-b{display:none}
 .ctc-sub-det{all:unset;box-sizing:border-box;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin-top:3px;padding:6px 12px;border-radius:8px;background:rgb(var(--ac-600));color:#fff;font-size:12px;font-weight:800;cursor:pointer}
 .ctc-sub-det:hover{background:rgb(var(--ac-700))}
+.ctc-mg{font-size:10.5px;font-weight:800;padding:1px 8px;border-radius:999px;background:rgb(var(--ac-600) / .14);color:rgb(var(--ac-700));vertical-align:middle;white-space:nowrap}
+html[data-mode=dark] .ctc-mg{color:#fff}
+.ctc-subs .ctc-sub-b{gap:8px!important}
+.ctc-si{display:flex;flex-direction:column;gap:4px;padding:8px 9px;border-radius:9px;background:var(--surface,#fff);border:1px solid rgb(245 158 11 / .35)}
+.ctc-si-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;font-size:12.5px}
+.ctc-si-h i{color:#d97706}
+.ctc-si-h span{font-size:11px;color:var(--text-3,#6b7280);font-weight:600}
+.ctc-si .ctc-sub-det{margin-top:2px}
 #ctsDet{position:fixed;inset:0;background:rgb(0 0 0 / .55);backdrop-filter:blur(3px);z-index:125;display:flex;align-items:center;justify-content:center;padding:16px}
 #ctsDet[hidden]{display:none}
 #ctsDet .csd{background:var(--surface,#fff);color:var(--text,#111);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.35);width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
@@ -28293,6 +28301,13 @@ tr.ctf-row>td:nth-child(2){box-shadow:inset -3px 0 0 #f59e0b}
 select.ctf-mv{display:block;margin-top:4px;max-width:170px;font-size:11px;padding:3px 4px;border-radius:7px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;font-weight:700;cursor:pointer}
 html[data-mode=dark] select.ctf-mv{background:rgba(245,158,11,.15);color:#fcd34d}
 select.ctf-mv option,select.ctf-mv optgroup{background:var(--surface,#fff);color:var(--text,#111)}
+/* ctx-search-frame */
+html body #ctxPick .cx-q{flex:none!important;min-height:46px!important;margin:14px 20px 2px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:10px!important;padding:0 14px!important;border:1.5px solid var(--border,#d1d5db)!important;border-radius:12px!important;background:var(--surface,#fff)!important;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+html body #ctxPick .cx-q:focus-within{border-color:rgb(var(--ac-600))!important;box-shadow:0 0 0 3px rgb(var(--ac-500) / .2)!important}
+html body #ctxPick .cx-q>i{flex:none;color:var(--text-3,#9ca3af)}
+html body #ctxPick .cx-q:focus-within>i{color:rgb(var(--ac-600))}
+html body #ctxPick .cx-q input,html body #ctxPick .cx-q input:focus,html body #ctxPick .cx-q input:focus-visible{flex:1 1 auto!important;min-width:0!important;width:auto!important;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important;margin:0!important;padding:11px 0!important;height:auto!important;color:var(--text,#111)!important}
+html body :is(.srch-box,.sp-q,.dt-q,.bcp-s label,.vp-q-w) input:is(:focus,:focus-visible){box-shadow:none!important;outline:0!important}
 /* ctx-bud-cards */
 .ctx-fld .t{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;display:flex;flex-direction:column;gap:5px;line-height:1.4}
 .ctx-fld .t .tt{overflow-wrap:anywhere}
@@ -28316,7 +28331,7 @@ select.ctf-mv option,select.ctf-mv optgroup{background:var(--surface,#fff);color
 #ctxPick .cx-g.ent i{color:rgb(var(--ac-600))}
 #ctxPick .cx-g.ent span{flex:1}
 #ctxPick .cx-g.ent em{font-style:normal;font-size:11.5px;font-weight:800;padding:1px 9px;border-radius:999px;background:rgb(var(--ac-600));color:#fff}
-#ctxPick .cx-l.cmpl>.cx-c.cmp{margin-inline-start:14px}
+#ctxPick .cx-l.cmpl>.cx-g.ent~.cx-c.cmp{margin-inline-start:14px}
 #ctxPick .cx-l.cmpl>.cx-g.ent+.cx-c.cmp{margin-top:0}
 /* ctx-bud-uniform */
 #ctxPick .cx-l.budl{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))!important;align-items:stretch!important;grid-auto-rows:auto!important}
@@ -28726,13 +28741,23 @@ const subOpen = new Set();
 function cardsSubs() {
   const g = document.querySelector('#ctCards .ctc-grid'); if (!g) return;
   const rows = ctVisible(), cards = [...g.children];
-  cards.forEach((el, i) => {
-    const r = rows[i]; if (!r || el.querySelector('.ctc-sub')) return;
-    const b = budOf(r.budId), s = b && subFind(b.id, r.subId); if (!s) return;
-    const h4 = el.querySelector('h4'), op = subOpen.has(r.id), key = b.id + '|' + s.id;
-    const html = `<div class="ctc-sub${op ? '' : ' cl'}"><button type="button" class="ctc-sub-tg" data-cst="${E(r.id)}" aria-expanded="${op}" title="פתיחה / מזעור"><i class="fa-solid ${op ? 'fa-folder-open' : 'fa-folder'}"></i><span class="nm">תת קטגוריה: <b>${E(s.name)}</b></span><i class="fa-solid fa-chevron-down cv"></i></button>
-      <div class="ctc-sub-b"><div class="a" style="font-size:11.5px">סעיף ${E(budLbl(b))} · ${E(b.year)}</div>${prjHtml(b.id, s.id, 'a')}<button type="button" class="ctc-sub-det" data-csd="${E(key)}"><i class="fa-solid fa-list-ul"></i> הצג פירוט</button></div></div>`;
-    h4 ? h4.insertAdjacentHTML('afterend', html) : el.insertAdjacentHTML('afterbegin', html);
+  if (cards.length !== rows.length) return;
+  /* איחוד: כרטיסיה אחת לכל שם חוזה, ובה כל תתי הקטגוריה */
+  const groups = new Map();
+  rows.forEach((r, i) => { const k = dk(r.name) || ('#' + r.id); if (!groups.has(k)) groups.set(k, []); groups.get(k).push({ r, el: cards[i] }); });
+  groups.forEach(L => {
+    const main = L[0].el; if (!main || main.querySelector('.ctc-subs')) return;
+    L.slice(1).forEach(x => x.el.remove());
+    const seen = new Set(), subs = [];
+    L.forEach(({ r }) => { const bd = budOf(r.budId), sb = bd && subFind(bd.id, r.subId); if (!sb) return; const k = bd.id + '|' + sb.id; if (seen.has(k)) return; seen.add(k); subs.push({ b: bd, s: sb, k, r }); });
+    const h4 = main.querySelector('h4');
+    if (L.length > 1 && h4 && !h4.querySelector('.ctc-mg')) h4.insertAdjacentHTML('beforeend', ` <span class="ctc-mg" title="שורות בטבלה עם אותו שם חוזה">${L.length} שורות</span>`);
+    if (!subs.length) return;
+    const gk = 'G:' + (dk(L[0].r.name) || L[0].r.id), op = subOpen.has(gk);
+    subs.sort((x, y) => x.s.name.localeCompare(y.s.name, 'he'));
+    const html = `<div class="ctc-subs ctc-sub${op ? '' : ' cl'}"><button type="button" class="ctc-sub-tg" data-cst="${E(gk)}" aria-expanded="${op}" title="פתיחה / מזעור"><i class="fa-solid ${op ? 'fa-folder-open' : 'fa-folder'}"></i><span class="nm">תתי קטגוריה <b>(${subs.length})</b>: ${subs.map(x => E(x.s.name)).join(' · ')}</span><i class="fa-solid fa-chevron-down cv"></i></button>
+      <div class="ctc-sub-b">${subs.map(x => `<div class="ctc-si"><div class="ctc-si-h"><i class="fa-solid fa-folder"></i><b>${E(x.s.name)}</b><span>סעיף ${E(budLbl(x.b))} · ${E(x.b.year)}</span></div>${prjHtml(x.b.id, x.s.id, 'a')}<button type="button" class="ctc-sub-det" data-csd="${E(x.k)}"><i class="fa-solid fa-list-ul"></i> הצג פירוט</button></div>`).join('')}</div></div>`;
+    h4 ? h4.insertAdjacentHTML('afterend', html) : main.insertAdjacentHTML('afterbegin', html);
   });
 }
 /* חלון פירוט לשם ספק (תת קטגוריה) */
@@ -28788,8 +28813,8 @@ function ctnItems() {
 }
 const blBidNow = () => ($('blBudget') || {}).value || '';
 const billsWith = n => { try { return BL().rows.filter(r => dk(r.contract) === dk(n)).length; } catch (e) { return 0; } };
-function openCtnPick() {
-  const inp = $('blContract'); if (!inp) return;
+function openCtnPick(target) {
+  const inp = target || $('blContract'); if (!inp) return;
   pOpen({
     title: 'בחירת שם חוזה', compact: true, subtitle: 'חוזים מלשונית חוזים וביטוחים ושמות שהוספת', icon: 'fa-file-contract', iconItem: 'fa-file-signature', iconOn: 'fa-file-circle-check',
     none: 'ללא שם חוזה', empty: 'אין עדיין שמות חוזים – הוסף למטה', addLabel: 'הוספת שם חוזה חדש', addPh: 'שם החוזה...',
@@ -28809,7 +28834,7 @@ function openCtnPick() {
       const x = id && ctnItems().find(i => 'n:' + dk(i.name) === id);
       inp.value = x ? x.name : '';
       inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
-      const r = x && x.ct, f = $('blSubF');
+      const r = x && x.ct, f = inp.id === 'blContract' ? $('blSubF') : null;
       if (r && r.subId && r.budId && r.budId === blBidNow() && f && [...f.options].some(o => o.value === r.subId)) { f.value = r.subId; f.dispatchEvent(new Event('change', { bubbles: true })); }
     },
     add: async v => {
@@ -28848,17 +28873,77 @@ function openCtnPick() {
     }
   });
 }
-(function initCtn() {
-  const inp = $('blContract'); if (!inp) return;
+function asPicker(inp, open, ph, tip, icon) {
+  if (!inp || inp.dataset.ctxp) return; inp.dataset.ctxp = '1';
   inp.removeAttribute('list'); inp.setAttribute('autocomplete', 'off'); inp.classList.add('ctx-in');
-  inp.placeholder = 'לחץ לבחירת שם חוזה...'; inp.title = 'לחץ לבחירה / הוספה / עריכה / מחיקה של שם חוזה';
-  inp.setAttribute('inputmode', 'none');
-  inp.addEventListener('click', e => { e.preventDefault(); openCtnPick(); });
-  inp.addEventListener('keydown', e => { if (e.key === 'Tab' || e.key === 'Shift' || e.key === 'Escape' || e.ctrlKey || e.metaKey) return; e.preventDefault(); openCtnPick(); });
+  inp.placeholder = ph; inp.title = tip; inp.setAttribute('inputmode', 'none');
+  inp.addEventListener('click', e => { e.preventDefault(); open(); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Tab' || e.key === 'Shift' || e.key === 'Escape' || e.ctrlKey || e.metaKey) return; e.preventDefault(); open(); });
   inp.addEventListener('paste', e => e.preventDefault());
   const l = inp.parentElement && inp.parentElement.querySelector('label');
-  if (l && !l.querySelector('.ctx-ic')) l.insertAdjacentHTML('afterbegin', '<i class="fa-solid fa-file-contract ctx-ic ml-1" style="color:rgb(var(--ac-600))"></i>');
+  if (l && icon && !l.querySelector('.ctx-ic')) l.insertAdjacentHTML('afterbegin', `<i class="fa-solid ${icon} ctx-ic ml-1" style="color:rgb(var(--ac-600))"></i>`);
+}
+(function initCtn() {
+  const tip = 'לחץ לבחירה / הוספה / עריכה / מחיקה של שם חוזה';
+  const b = $('blContract'); if (b) asPicker(b, () => openCtnPick(b), 'לחץ לבחירת שם חוזה...', tip, 'fa-file-contract');
+  const c = $('ctFName'); if (c) asPicker(c, () => openCtnPick(c), 'לחץ לבחירת שם חוזה...', tip, 'fa-file-contract');
 })();
+
+/* ================= 3ב. הוסף הזמנה (סטטוס הזמנות): שם ספק בכרטיסיות ================= */
+const osCtx = () => { try { const b = osBud(($('osBudget') || {}).value), sid = ($('osSubF') || {}).value, s = b && sid ? arr(b.subs).find(x => x && x.id === sid) : null; return { b, s }; } catch (e) { return {}; } };
+const canOs = () => { try { return can('ord_edit') || can('ord_create') || can('os_edit') || can('os_create'); } catch (e) { return true; } };
+function osVendors(b, s) {
+  const m = new Map();
+  arr(s.vendors).map(nrm).filter(Boolean).forEach(v => { if (!m.has(dk(v))) m.set(dk(v), { name: v, saved: true }); });
+  try { OS().rows.forEach(r => { if (r.budgetId !== b.id || r.subId !== s.id) return; const v = nrm(r.vendor); if (v && !m.has(dk(v))) m.set(dk(v), { name: v, saved: false }); }); } catch (e) { }
+  return [...m.values()].sort((x, y) => x.name.localeCompare(y.name, 'he'));
+}
+function openVnPick() {
+  const inp = $('osVnF'); if (!inp) return;
+  const { b, s } = osCtx(); if (!b || !s) return note('בחרו קודם סעיף תקציבי ותת קטגוריה');
+  let lbl = ''; try { lbl = osBudLbl(b); } catch (e) { lbl = b.name || ''; }
+  const rowsOf = name => { try { return OS().rows.filter(r => r.budgetId === b.id && r.subId === s.id && dk(r.vendor) === dk(name)); } catch (e) { return []; } };
+  pOpen({
+    title: 'בחירת שם ספק', compact: true, subtitle: `תת קטגוריה: ${E(s.name)} · ${E(lbl)}`, icon: 'fa-helmet-safety', cls: 'sup', iconItem: 'fa-building', iconOn: 'fa-circle-check',
+    empty: 'עדיין לא שויכו ספקים לתת הקטגוריה – הוסף למטה', addLabel: 'הוספת שם ספק חדש לתת הקטגוריה', addPh: 'שם הספק (קבלן מבצע)...',
+    canEdit: () => canOs() || canCt(),
+    cur: () => { const v = dk(inp.value); return v && osVendors(b, s).some(x => dk(x.name) === v) ? 'v:' + v : ''; },
+    items: () => osVendors(b, s).map(x => ({ id: 'v:' + dk(x.name), title: x.name })),
+    pick: id => { const x = osVendors(b, s).find(i => 'v:' + dk(i.name) === id); inp.value = x ? x.name : ''; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); },
+    add: async v => {
+      if (osVendors(b, s).some(x => dk(x.name) === dk(v))) return { err: `⚠️ שם ספק זה כבר קיים בתת הקטגוריה "${s.name}"` };
+      s.vendors = arr(s.vendors).map(nrm).filter(Boolean).concat(v); log(`נוסף ספק "${v}" לתת קטגוריה ${s.name}`); saveData();
+      return { id: 'v:' + dk(v) };
+    },
+    rename: async (id, v) => {
+      const x = osVendors(b, s).find(i => 'v:' + dk(i.name) === id); if (!x || x.name === v) return '';
+      if (osVendors(b, s).some(i => i !== x && dk(i.name) === dk(v))) return `⚠️ שם ספק זה כבר קיים בתת הקטגוריה "${s.name}"`;
+      const R = rowsOf(x.name);
+      if (R.length && !(await okBox(`לשנות את שם הספק "${x.name}" ל"${v}"?
+השם יתעדכן גם ב-${R.length} הזמנות.`))) return '';
+      const k = dk(x.name); s.vendors = arr(s.vendors).map(nrm).filter(Boolean).map(n => dk(n) === k ? v : n); if (!s.vendors.some(n => dk(n) === dk(v))) s.vendors.push(v);
+      R.forEach(r => { r.vendor = v; }); if (dk(inp.value) === k) inp.value = v;
+      log(`שונה שם ספק "${x.name}" ל"${v}" בתת קטגוריה ${s.name}`); saveData(); try { renderOrdStatus(); } catch (e) { }
+      return '';
+    },
+    del: async id => {
+      const x = osVendors(b, s).find(i => 'v:' + dk(i.name) === id); if (!x) return;
+      const R = rowsOf(x.name);
+      if (!(await okBox(`למחוק את שם הספק "${x.name}" מתת הקטגוריה "${s.name}"?${R.length ? `
+${R.length} הזמנות שכבר רשום בהן הספק לא ישתנו, אבל השם ימשיך להופיע ברשימה כל עוד הוא רשום בהזמנה.` : ''}`))) return;
+      const k = dk(x.name); s.vendors = arr(s.vendors).map(nrm).filter(n => n && dk(n) !== k);
+      if (dk(inp.value) === k && !R.length) { inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); }
+      log(`נמחק ספק "${x.name}" מתת קטגוריה ${s.name}`); saveData();
+    }
+  });
+}
+function prepVn() {
+  const f = $('osVnF'); if (!f) return;
+  asPicker(f, openVnPick, 'לחץ לבחירת שם ספק...', 'לחץ לבחירה / הוספה / עריכה / מחיקה של שם ספק', '');
+  const lb = f.parentElement && f.parentElement.querySelector('.vn-listbtn'); if (lb) lb.style.display = 'none';
+}
+document.addEventListener('click', e => { const lb = e.target.closest && e.target.closest('#osRowModal .vn-listbtn'); if (!lb) return; e.preventDefault(); e.stopImmediatePropagation(); openVnPick(); }, true);
+if (typeof window.osRowModal === 'function') { const _om2 = window.osRowModal; window.osRowModal = function () { const r = _om2.apply(this, arguments); try { prepVn(); } catch (e) { } return r; }; }
 
 /* ================= 4. כיווץ אוטומטי של כל קובץ שמועלה ================= */
 const loadJS = (srcs) => new Promise((ok, no) => {
@@ -28934,6 +29019,8 @@ if (typeof _sf === 'function') {
   #ctxPick .cx,#ctsDet .csd{max-height:90dvh!important}
 }
 #ctxPick,#ctsDet{overflow-y:auto;overscroll-behavior:contain}
+[role=dialog] [data-lenis-prevent],.fixed.inset-0 [data-lenis-prevent],[role=dialog] :is(.overflow-y-auto,.overflow-auto),[data-lenis-prevent] [data-lenis-prevent]{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+[role=dialog]:not([hidden]),[aria-modal=true]{touch-action:pan-x pan-y pinch-zoom}
 #ctxPick .cx-l,#ctsDet .csd-b{overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y pinch-zoom;min-height:0}
 @media (max-width:640px){
   #ctxPick,#ctsDet{padding:8px!important;align-items:flex-start!important}
@@ -28977,6 +29064,14 @@ const run = () => { t = 0; try { mark(); lenisGuard(); } catch (e) { } try { src
 const later = () => { if (!t) t = setTimeout(run, 120); };
 new MutationObserver(later).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
 setInterval(() => { try { lenisGuard(); } catch (e) { } }, 500);
+/* חלונות בתוך חלונות / לשוניות בתוך חלון: כל אזור שנגלל מסומן לפני שהגלילה החלקה תופסת את האירוע (עכבר ומגע) */
+const canScroll = n => { if (!n || n.nodeType !== 1 || n === document.body || n === document.documentElement) return false; const cs = getComputedStyle(n); return (/(auto|scroll|overlay)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 1) || (/(auto|scroll|overlay)/.test(cs.overflowX) && n.scrollWidth > n.clientWidth + 1); };
+const markPath = e => {
+  let n = e.target, hit = false;
+  while (n && n !== document.body) { if (canScroll(n)) { if (!n.hasAttribute('data-lenis-prevent')) n.setAttribute('data-lenis-prevent', ''); hit = true; } n = n.parentElement; }
+  return hit;
+};
+['wheel', 'touchstart', 'pointerdown'].forEach(ev => window.addEventListener(ev, e => { try { markPath(e); } catch (x) { } }, { capture: true, passive: true }));
 /* גלגלת עכבר בתוך חלון: אם הגלילה הפנימית כבר בקצה – לא מעבירים לעמוד שמאחור */
 document.addEventListener('wheel', e => {
   const d = e.target.closest && e.target.closest('[data-lenis-prevent]'); if (!d || !isOpen(d)) return;
