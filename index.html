@@ -28441,7 +28441,7 @@ window.ctPrjHtml = prjHtml;
 /* ================= חלון בחירה כללי בכרטיסיות ================= */
 const P = { cfg: null, edit: null, q: '' };
 function pOpen(cfg) { P.cfg = cfg; P.edit = null; P.q = ''; pDraw(); $('ctxPick').hidden = false; setTimeout(() => { const q = $('ctxQ') || $('ctxNew'); if (q) q.focus(); }, 40); }
-function pClose() { $('ctxPick').hidden = true; const c = P.cfg; P.cfg = null; P.edit = null; if (c && c.onClose) try { c.onClose(); } catch (e) { } }
+function pClose() { try { syncModal(); } catch (e) { } $('ctxPick').hidden = true; const c = P.cfg; P.cfg = null; P.edit = null; if (c && c.onClose) try { c.onClose(); } catch (e) { } }
 function pDraw() {
   const c = P.cfg; if (!c) return;
   const all = c.items(), q = P.q.trim().toLowerCase(), cur = c.cur ? c.cur() : '', ed = c.canEdit ? c.canEdit() : false;
@@ -28643,7 +28643,14 @@ function subCfg(bid, opts) {
     rename: async (id, v) => {
       const bd = b(), s = subFind(bid, id); if (!s) return '';
       if (dupSub(bd, v, id)) return dupMsg(bd);
-      if (s.name !== v) { log(`שונה שם ספק "${s.name}" ל"${v}" בסעיף ${budLbl(bd)}`); s.name = v; saveData(); rerender(); }
+      if (s.name !== v) {
+        const old = s.name; s.name = v;
+        /* מעדכנים גם עותקים של אותו סעיף (אם הנתונים נטענו כאובייקט) */
+        try { BL().budgets.forEach(x => { if (x.id === bid) arr(x.subs).forEach(y => { if (y && y.id === id) y.name = v; }); }); } catch (e) { }
+        log(`שונה שם ספק "${old}" ל"${v}" בסעיף ${budLbl(bd)}`); saveData(); rerender();
+      }
+      try { syncModal(); } catch (e) { }
+      if ((subFind(bid, id) || {}).name !== v) return 'השינוי לא נשמר – נסה שוב';
       return '';
     },
     del: async id => {
