@@ -28451,7 +28451,7 @@ function pDraw() {
     ${all.length > 5 ? `<div class="cx-q"><i class="fa-solid fa-magnifying-glass"></i><input id="ctxQ" value="${E(P.q)}" placeholder="חיפוש..."></div>` : ''}
     <div class="cx-l${c.compact ? ' cmpl' : ''}${c.cardCls ? ' ' + c.cardCls : ''}" role="listbox">${h}</div>
     ${c.add && ed ? `<div class="cx-a"><label class="cx-al" for="ctxNew"><i class="fa-solid fa-circle-plus"></i> ${E(c.addLabel)}</label><input class="cx-in" id="ctxNew" maxlength="90" placeholder="${E(c.addPh || 'הקלד שם ולחץ Enter...')}"><button type="button" class="cx-add" data-pa="1"><i class="fa-solid fa-plus"></i> הוסף ובחר</button>${c.tip ? `<div class="cx-tip">${c.tip}</div>` : ''}</div>` : ''}`;
-  const fe = $('ctxEd'); if (fe) { fe.focus(); fe.select(); }
+  const fe = $('ctxEd'); if (fe) { try { fe.focus({ preventScroll: true }); } catch (x) { fe.focus(); } fe.select(); const cd = fe.closest('.cx-c'); if (cd) setTimeout(() => { try { cd.scrollIntoView({ block: 'nearest' }); } catch (x) { } }, 30); }
 }
 async function pAdd() {
   const c = P.cfg, i = $('ctxNew'); if (!c || !i) return;
@@ -28460,18 +28460,34 @@ async function pAdd() {
   if (r.err) { await alertBox(r.err); const j = $('ctxNew'); if (j) { j.focus(); j.select(); } return; }
   c.pick(r.id); pClose();
 }
+let pBusy = false;
 async function pSave(id) {
-  const c = P.cfg, i = $('ctxEd'); if (!c || !i) return;
+  const c = P.cfg, i = $('ctxEd'); if (!c || !i || pBusy) return;
+  pBusy = true; try { await pSave2(c, i, id); } finally { pBusy = false; }
+}
+async function pSave2(c, i, id) {
   const v = nrm(i.value); if (!v) return note('השם לא יכול להיות ריק');
   const err = await c.rename((P.map && P.map.get(id)) || id, v); if (err) { await alertBox(err); const j = $('ctxEd'); if (j) j.focus(); return; }
   P.edit = null; pDraw();
 }
+/* שמירה / ביטול / הוספה מופעלים כבר בלחיצה עצמה (pointerdown), לפני שהמקלדת בטלפון נסגרת והחלון זז – כך הלחיצה לא "מפספסת" */
+let pHot = 0;
+$('ctxPick').addEventListener('pointerdown', e => {
+  if (!P.cfg || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const s = e.target.closest('[data-ps]'), cn = e.target.closest('[data-pc]'), a = e.target.closest('[data-pa]');
+  if (!s && !cn && !a) return;
+  e.preventDefault(); pHot = Date.now();
+  if (s) pSave(s.dataset.ps); else if (cn) { P.edit = null; pDraw(); } else pAdd();
+});
 $('ctxPick').addEventListener('click', async e => {
   const c = P.cfg; if (!c) return;
-  if (e.target.id === 'ctxPick' || e.target.closest('[data-px]')) return pClose();
+  if (Date.now() - pHot < 700 && e.target.closest('[data-ps],[data-pc],[data-pa]')) return;
+  if (e.target.id === 'ctxPick') { if (P.edit) return; return pClose(); }
+  if (e.target.closest('[data-px]')) return pClose();
   if (e.target.closest('[data-pa]')) return pAdd();
   const s = e.target.closest('[data-ps]'); if (s) return pSave(s.dataset.ps);
   if (e.target.closest('[data-pc]')) { P.edit = null; return pDraw(); }
+  if (P.edit && e.target.closest('[data-pk]')) { const i = $('ctxEd'); if (i) i.focus(); return; }
   const ed = e.target.closest('[data-pe]'); if (ed) { P.edit = ed.dataset.pe; return pDraw(); }
   const d = e.target.closest('[data-pd]'); if (d) { await c.del(d.dataset.pd); if (P.cfg) pDraw(); return; }
   const p = e.target.closest('[data-pk]'); if (p) { c.pick(p.dataset.pk); pClose(); }
@@ -29135,5 +29151,53 @@ run();
 })();
 </script>
 
+
+<script id="budSyncJs">
+/* סנכרון אוטומטי של סכום הסעיף בין סטטוס הזמנות ← סעיפים תקציביים לבין כספים וחוזים ← חשבונות ← סעיפים תקציביים
+   התאמה לפי מספר סעיף + שנה (ואם אין מספר – לפי שם + שנה). הצד שהשתנה אחרון קובע; במצב התחלתי – סטטוס הזמנות קובע. */
+(function () {
+'use strict';
+const nk = v => String(v == null ? '' : v).replace(/\s+/g, '').replace(/[–—]/g, '-').toLowerCase();
+const dk = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().toLowerCase().replace(/[\s"'`׳״\-–—_.,()]/g, '');
+const keyOf = b => { const y = Number(b.year) || 0, n = nk(b.num); return n ? 'n:' + n + '|' + y : (dk(b.name) ? 'm:' + dk(b.name) + '|' + y : ''); };
+const num = v => (v === '' || v == null || isNaN(Number(v))) ? null : Number(v);
+const snap = new Map();
+let busy = false;
+function sync(announce) {
+  let osB = [], blB = [];
+  try { osB = OS().budgets; blB = BL().budgets; } catch (e) { return 0; }
+  const m = new Map();
+  blB.forEach(b => { const k = keyOf(b); if (!k) return; if (!m.has(k)) m.set(k, []); m.get(k).push(b); });
+  let n = 0; const msgs = [];
+  osB.forEach(o => {
+    const k = keyOf(o), L = k && m.get(k); if (!L) return;
+    L.forEach(b => {
+      const ov = num(o.original), bv = num(b.original), so = snap.get('os:' + o.id), sb = snap.get('bl:' + b.id);
+      if (ov !== bv) {
+        const osCh = so === undefined || so !== ov, blCh = sb !== undefined && sb !== bv;
+        if (osCh || !blCh) { b.original = o.original === '' || o.original == null ? '' : ov; msgs.push(`"${o.num ? o.num + ' – ' : ''}${o.name || ''}" עודכן גם בחשבונות ← סעיפים תקציביים`); }
+        else { o.original = b.original === '' || b.original == null ? '' : bv; msgs.push(`"${b.num ? b.num + ' – ' : ''}${b.name || ''}" עודכן גם בסטטוס הזמנות ← סעיפים תקציביים`); }
+        n++;
+        try { addLog('סנכרון סכום סעיף תקציבי: ' + msgs[msgs.length - 1]); } catch (e) { }
+      }
+      snap.set('os:' + o.id, num(o.original)); snap.set('bl:' + b.id, num(b.original));
+    });
+  });
+  osB.forEach(o => snap.set('os:' + o.id, num(o.original)));
+  blB.forEach(b => snap.set('bl:' + b.id, num(b.original)));
+  if (n && announce) try { showNotification('🔄 סכום הסעיף סונכרן: ' + msgs.slice(0, 2).join(' · ') + (msgs.length > 2 ? ` (+${msgs.length - 2})` : '')); } catch (e) { }
+  return n;
+}
+const redraw = () => { ['renderOrdStatus', 'renderBills', 'renderContracts'].forEach(f => { try { if (typeof window[f] === 'function') window[f](); } catch (e) { } }); };
+const _sd = window.saveData;
+window.saveData = function () {
+  if (!busy) { busy = true; let n = 0; try { n = sync(true); } catch (e) { console.warn('budSync', e); } busy = false; if (n) setTimeout(redraw, 0); }
+  return _sd.apply(this, arguments);
+};
+/* גם כשנתונים מגיעים מהשרת / ממחשב אחר */
+setInterval(() => { if (busy) return; let n = 0; try { n = sync(true); } catch (e) { } if (n) { try { window.saveData(); } catch (e) { } redraw(); } }, 4000);
+window.budSyncNow = () => { const n = sync(true); if (n) { window.saveData(); redraw(); } return n; };
+})();
+</script>
 </body>
 </html>
