@@ -28279,6 +28279,9 @@ html[data-mode=dark] #ctxPick .cx-c.cmp .cx-acts>button.cx-b.del{background:rgba
 .ctf-bar>span i{color:#d97706}
 .ctf-bar button{padding:6px 12px;border-radius:9px;border:1px solid rgb(var(--ac-300));background:rgb(var(--ac-50));color:rgb(var(--ac-text,var(--ac-700)));font-weight:800;font-size:12px;cursor:pointer}
 .ctf-bar button:hover{background:rgb(var(--ac-600));border-color:rgb(var(--ac-600));color:#fff}
+tr.ctf-h{cursor:pointer;user-select:none}
+tr.ctf-h:hover>td{filter:brightness(.97)}
+.ctf-hd .ctf-tg{flex:0 1 auto}
 tr.ctf-h>td{padding:0!important;background:rgb(var(--ac-600) / .09);border-top:2px solid rgb(var(--ac-400));border-bottom:1px solid rgb(var(--ac-300))}
 tr.ctf-h.none>td{background:var(--surface-2,#f8fafc);border-top-color:var(--border,#d1d5db)}
 tr.ctf-h.drop>td{background:rgb(var(--ac-600) / .22);outline:2px dashed rgb(var(--ac-600));outline-offset:-3px}
@@ -28718,7 +28721,8 @@ if (ctBodyEl) {
   ctBodyEl.addEventListener('click', async e => {
     const all = e.target.closest('[data-fall]');
     if (all) { const s = closedSet(); const keys = folderKeys(); if (all.dataset.fall === '1') keys.forEach(k => s.delete(k)); else keys.forEach(k => s.add(k)); saveClosed(s); return renderContracts(); }
-    const t = e.target.closest('[data-ft]');
+    let t = e.target.closest('[data-ft]');
+    if (!t && !e.target.closest('[data-fr],[data-fd],a,input,select,textarea')) { const hr = e.target.closest('tr.ctf-h'); if (hr) t = hr.querySelector('[data-ft]'); }
     if (t) { const s = closedSet(), k = t.dataset.ft; s.has(k) ? s.delete(k) : s.add(k); saveClosed(s); return renderContracts(); }
     const rn = e.target.closest('[data-fr]');
     if (rn) {
