@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
+<script id="noMotionJs">
+(function(){var fix=function(o){if(o&&typeof o==='object'&&o.behavior==='smooth'){o=Object.assign({},o);o.behavior='auto';}return o;};
+var E=Element.prototype,si=E.scrollIntoView;E.scrollIntoView=function(o){return si.call(this,fix(o));};
+['scrollTo','scroll','scrollBy'].forEach(function(k){var w=window[k];if(w)window[k]=function(a,b){return typeof a==='object'?w.call(window,fix(a)):w.apply(window,arguments);};var e=E[k];if(e)E[k]=function(a,b){return typeof a==='object'?e.call(this,fix(a)):e.apply(this,arguments);};});
+document.documentElement.setAttribute('data-ds-motion','off');})();
+</script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>מערכת ניהול ובקרה חשבות</title>
@@ -9763,10 +9770,10 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({ '&': '&a
 let S = (window.dsLive && dsLive()) || {};
 const LIB = { gsap: 0, lenis: 0 };
 const G = () => (LIB.gsap && window.gsap) || null;
-const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches || R.getAttribute('data-ds-motion') === 'off';
+const reduce = () => true; /* אפקטים כבויים לצמיתות */
 const dur = d => d * 100 / (+S.an_sp || 100);
 const acc = () => { const v = getComputedStyle(R).getPropertyValue('--ac-600').trim(); return v ? 'rgb(' + v.replace(/\s+/g, ',') + ')' : '#0b7285'; };
-const loadJS = urls => new Promise(res => { const n = i => { if (i >= urls.length) return res(false); const s = document.createElement('script'); s.src = urls[i]; s.async = true; s.onload = () => res(true); s.onerror = () => { s.remove(); n(i + 1); }; document.head.appendChild(s); }; n(0); });
+const loadJS = urls => Promise.resolve(false); const loadJS_orig = urls => new Promise(res => { const n = i => { if (i >= urls.length) return res(false); const s = document.createElement('script'); s.src = urls[i]; s.async = true; s.onload = () => res(true); s.onerror = () => { s.remove(); n(i + 1); }; document.head.appendChild(s); }; n(0); });
 document.head.insertAdjacentHTML('beforeend', `<style id="animFxCss">
 html.lenis,html.lenis body{height:auto}.lenis.lenis-smooth{scroll-behavior:auto!important}.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}.lenis.lenis-stopped{overflow:hidden}
 #anBg,#anSpark{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none}#anBg{z-index:-1}#anSpark{z-index:300}
@@ -29542,5 +29549,25 @@ window.yfOpen = open;
 })();
 </script>
 
+<style id="noMotionCss">
+html :is(*,#nm#nm#nm#nm#nm#nm),html :is(*,#nm#nm#nm#nm#nm#nm)::before,html :is(*,#nm#nm#nm#nm#nm#nm)::after{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition:none!important;scroll-behavior:auto!important}
+html,body{scroll-behavior:auto!important}
+#anBg,#anSpark{display:none!important}
+</style>
+<script id="noMotionStrip">
+(function(){
+/* מסיר "קפיצה" (transform) מכל כללי :hover / :active */
+function strip(rules){if(!rules)return;for(var i=0;i<rules.length;i++){var r=rules[i];
+ if(r.cssRules&&r.cssRules.length&&!r.selectorText)strip(r.cssRules);
+ if(r.selectorText&&/:(hover|active)/.test(r.selectorText)&&r.style){var t=r.style.getPropertyValue('transform');
+  if(t&&t.trim()!=='none'){r.style.removeProperty('transform');}
+  ['translate','scale','rotate'].forEach(function(p){var v=r.style.getPropertyValue(p);if(v&&v.trim()!=='none')r.style.removeProperty(p);});}}}
+function run(){for(var i=0;i<document.styleSheets.length;i++){try{strip(document.styleSheets[i].cssRules);}catch(e){}}}
+var tm=0;function later(){clearTimeout(tm);tm=setTimeout(run,30);}
+run();addEventListener('load',run);
+new MutationObserver(function(ms){for(var m of ms){var n=m.target;if(n.nodeName==='STYLE'||n.nodeName==='LINK'||(n.parentNode&&n.parentNode.nodeName==='STYLE'))return later();for(var a of m.addedNodes)if(a.nodeName==='STYLE'||a.nodeName==='LINK')return later();}}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+var R=document.documentElement;R.setAttribute('data-ds-motion','off');new MutationObserver(function(){if(R.getAttribute('data-ds-motion')!=='off')R.setAttribute('data-ds-motion','off');}).observe(R,{attributes:true,attributeFilter:['data-ds-motion']});
+})();
+</script>
 </body>
 </html>
