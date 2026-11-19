@@ -5056,7 +5056,7 @@ function sqRun(k, fn) {
 }
 function sqSet(k, f, v, fn) {
     sqS(k)[f] = v; clearTimeout(SQT[k]);
-    if (f === 'q' && v) { SQT[k] = setTimeout(() => sqRun(k, fn), 280); return; }
+    if (f === 'q' && v) { SQT[k] = setTimeout(() => sqRun(k, fn), 200); return; }
     sqRun(k, fn);
 }
 /* נרמול לחיפוש: אותיות קטנות, גרשיים/מרכאות אחידים, רווחים כפולים, תווי כיוון */
@@ -18323,13 +18323,32 @@ function inputCtx(el) {
     const td = el.closest('td'); if (td) t.push(headerOf(td));
     return t.filter(Boolean).join(' ');
 }
-function conv(el) {
-    if (!el || el.dataset.nfmt || el.type !== 'number' || isYear(el) || el.closest('[data-nocomma]')) return;
+/* שלב 1 (קריאה בלבד): האם השדה צריך פסיקים */
+/* בטבלאות: אותה עמודה + אותו סוג שדה = אותה החלטה, אז מחשבים פעם אחת לכל עמודה ולא לכל שורה */
+const needCache = new WeakMap();
+function convNeed(el) {
+    if (!el || el.dataset.nfmt || el.type !== 'number' || isYear(el) || el.closest('[data-nocomma]')) return false;
+    const td = el.closest('td'), tb = td && td.closest('table');
+    let ck = null, m = null;
+    if (tb && !el.id && !el.closest('label')) {
+        let col = 0; for (const c of td.parentElement.cells) { if (c === td) break; col += c.colSpan || 1; }
+        ck = col + '|' + (el.title || '') + '|' + (el.getAttribute('aria-label') || '') + '|' + (el.dataset.money || '') + '|' + (/\d/.test(el.placeholder || '') ? '#' : el.placeholder || '') + '|' + (el.getAttribute('onchange') || '').replace(/'[^']*'/g, '').slice(0, 60);
+        m = needCache.get(tb); if (!m) { m = new Map(); needCache.set(tb, m); }
+        if (m.has(ck)) return m.get(ck);
+    }
     const ic = inputCtx(el);
-    if (!MONEY.test(ic) && !(el.closest(INV_SEL) && QTY.test(ic))) return;
-    const raw = VD.get.call(el);
-    let ta = ''; try { ta = getComputedStyle(el).textAlign; } catch (e) { }
-    const rtl = (() => { try { return getComputedStyle(el).direction === 'rtl'; } catch (e) { return true; } })();
+    const r = MONEY.test(ic) || !!(el.closest(INV_SEL) && QTY.test(ic));
+    if (m) m.set(ck, r);
+    return r;
+}
+const convSt = el => { try { const cs = getComputedStyle(el); return [cs.textAlign, cs.direction === 'rtl']; } catch (e) { return ['', true]; } };
+function conv(el, st) {
+    if (!st) { if (!convNeed(el)) return; st = convSt(el); }
+    convApply(el, st);
+}
+/* שלב 2 (כתיבה): המרת השדה. קודם קוראים את הסגנון של כל השדות ורק אז כותבים – חישוב סגנון אחד במקום אחד לכל שדה */
+function convApply(el, st) {
+    const raw = VD.get.call(el), ta = st[0], rtl = st[1];
     el.dataset.nfmt = '1';
     el.type = 'text';
     el.inputMode = 'decimal';
@@ -18452,8 +18471,12 @@ function scan(root) {
     if (!root) return;
     if (root.nodeType === 3) { if (!skipEl(root.parentElement)) fmtText(root); return; }
     if (root.nodeType !== 1 || SKIP_TAG.test(root.nodeName)) return;
-    if (root.matches && root.matches('input[type=number]')) conv(root);
-    if (root.querySelectorAll) root.querySelectorAll('input[type=number]').forEach(conv);
+    {
+        const ins = root.querySelectorAll ? [...root.querySelectorAll('input[type=number]')] : [];
+        if (root.matches && root.matches('input[type=number]')) ins.unshift(root);
+        const need = ins.filter(convNeed), sts = need.map(convSt);
+        need.forEach((el, i) => convApply(el, sts[i]));
+    }
     if (skipEl(root)) return;
     const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode: n => {
