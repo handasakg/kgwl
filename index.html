@@ -2256,13 +2256,24 @@ function doPost(e) {
             applyIntegrationDefaults();
         }
 
-        function saveData() {
+        /* שמירה מהירה: המסך מתעדכן מיד, והכתיבה הכבדה (מקומית + ענן + לוח בקרה) רצה פעם אחת מיד אחרי זה */
+        let _svT = 0, _svPend = false;
+        function saveDataNow() {
+            clearTimeout(_svT); _svT = 0; if (!_svPend) return; _svPend = false;
+            try { if (window.__evPend) { window.__evPend = false; evTrack(); } } catch (e) { console.error('evTrack', e); }
             localStorage.setItem('inventory_app_data', JSON.stringify(appData));
             if (isFirebaseConnected && firebaseDb && cloudInitialLoaded) {
                 pushToCloud();
             }
-            renderDashboard();
+            try { renderDashboard(); } catch (e) { console.error(e); }
         }
+        function saveData() {
+            _svPend = true;
+            if (!_svT) _svT = setTimeout(saveDataNow, 0);
+        }
+        window.saveDataNow = saveDataNow;
+        addEventListener('pagehide', saveDataNow); addEventListener('beforeunload', saveDataNow);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) saveDataNow(); });
 
         function checkAutoDailyBackup() {
             const today = new Date().toISOString().split('T')[0];
@@ -2315,8 +2326,11 @@ function doPost(e) {
             const { firebaseConfig, ...rest } = appData; // לא שומרים את פרטי החיבור בענן
             return JSON.parse(JSON.stringify(rest));      // מסיר undefined (Firebase זורק עליו שגיאה)
         }
+        let _cloudEcho = false;
         function pushToCloud() {
-            firebaseDb.ref('appData').set(cloudPayload()).catch(err => {
+            _cloudEcho = true;
+            let p; try { p = firebaseDb.ref('appData').set(cloudPayload()); } finally { _cloudEcho = false; }
+            p.catch(err => {
                 console.error('Cloud write failed', err);
                 showNotification('⚠️ שמירה לענן נכשלה: ' + (err.code || err.message));
             });
@@ -2401,6 +2415,7 @@ function doPost(e) {
             cloudRefObj = firebaseDb.ref('appData');
             cloudHandler = cloudRefObj.on('value', (snapshot) => {
                 clearTimeout(offlineTimer);
+                if (_cloudEcho && cloudInitialLoaded) return; // זה ההד של השמירה שלנו – הנתונים כבר מעודכנים כאן
                 const cloudData = snapshot.val();
                 const firstLoad = !cloudInitialLoaded;
                 cloudInitialLoaded = true;
@@ -3139,8 +3154,7 @@ function doPost(e) {
             if (lowStockItems.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">כל המלאי תקין! אין חורגים.</td></tr>`;
             } else {
-                lowStockItems.forEach(item => {
-                    tbody.innerHTML += `
+                tbody.innerHTML = lowStockItems.map(item => `
                         <tr class="border-b text-xs">
                             <td class="p-2 font-mono">${item.sku}</td>
                             <td class="p-2 font-bold">${item.name}</td>
@@ -3148,20 +3162,17 @@ function doPost(e) {
                             <td class="p-2">${item.minQty}</td>
                             <td class="p-2"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">חוסר</span></td>
                         </tr>
-                    `;
-                });
+                    `).join('');
             }
 
             const logsContainer = document.getElementById('systemActivityLogs');
             logsContainer.innerHTML = appData.logs.length === 0 ? '<p class="text-xs text-gray-400 text-center">אין פעילות מוקלטת</p>' : '';
-            appData.logs.slice(-6).reverse().forEach(log => {
-                logsContainer.innerHTML += `
+            if (appData.logs.length) logsContainer.innerHTML = appData.logs.slice(-6).reverse().map(log => `
                     <div class="text-xs bg-gray-50 p-2 rounded border flex justify-between items-center">
                         <span class="text-gray-700">${log.text}</span>
                         <span class="text-[10px] text-gray-400">${log.time}</span>
                     </div>
-                `;
-            });
+                `).join('');
         }
 
         // --- CATEGORIES ---
@@ -3271,7 +3282,7 @@ function doPost(e) {
             const search = document.getElementById('inventorySearch').value.toLowerCase();
             const cat = document.getElementById('inventoryCategoryFilter').value;
             const tbody = document.getElementById('inventoryTableBody');
-            tbody.innerHTML = '';
+            let _h = '';
 
             const filtered = appData.inventory.filter(item => {
                 const matchesSearch = item.name.toLowerCase().includes(search) || item.sku.toLowerCase().includes(search);
@@ -3281,7 +3292,7 @@ function doPost(e) {
 
             filtered.forEach(item => {
                 const isLow = Number(item.quantity) <= Number(item.minQty);
-                tbody.innerHTML += `
+                _h += `
                     <tr class="hover:bg-gray-50 transition border-b">
                         <td class="p-3 font-mono font-bold text-gray-600">${item.sku}</td>
                         <td class="p-3 font-bold text-gray-800">${item.name}${(() => { const o = appData.orders.find(x => x.id === (invOrderOf(item.id) || item.orderId)); return o ? `<div class="text-[10px] font-semibold text-indigo-600"><i class="fa-solid fa-link"></i> הזמנה ${esc(ordLbl(o))}</div>` : ''; })()}</td>
@@ -3302,6 +3313,7 @@ function doPost(e) {
                     </tr>
                 `;
             });
+            tbody.innerHTML = _h;
         }
 
         function adjustQuantity(id, delta) {
@@ -3538,7 +3550,7 @@ function doPost(e) {
 
             pendingList.innerHTML = ''; shippedList.innerHTML = ''; deliveredList.innerHTML = '';
 
-            let pCount = 0, sCount = 0, dCount = 0;
+            let pCount = 0, sCount = 0, dCount = 0; const _oh = { p: '', s: '', d: '' };
 
             appData.orders.forEach(o => { if (!Number(o.year)) o.year = ordYearOf(o); });
             { const ys = ordYears(); if (!ys.includes(ordY)) ordY = ys[0]; const ysel = document.getElementById('ordYear'); if (ysel) ysel.innerHTML = ys.map(y => `<option ${y === ordY ? 'selected' : ''}>${y}</option>`).join(''); }
@@ -3564,10 +3576,11 @@ function doPost(e) {
                     </div>
                 `;
 
-                if (ord.status === 'pending') { pendingList.innerHTML += card; pCount++; }
-                else if (ord.status === 'shipped') { shippedList.innerHTML += card; sCount++; }
-                else { deliveredList.innerHTML += card; dCount++; }
+                if (ord.status === 'pending') { _oh.p += card; pCount++; }
+                else if (ord.status === 'shipped') { _oh.s += card; sCount++; }
+                else { _oh.d += card; dCount++; }
             });
+            pendingList.innerHTML += _oh.p; shippedList.innerHTML += _oh.s; deliveredList.innerHTML += _oh.d;
 
             document.getElementById('count-pending').innerText = pCount;
             document.getElementById('count-shipped').innerText = sCount;
@@ -5056,14 +5069,15 @@ function sqBox(k, cols, fn) {
 /* חיפוש: הערך נשמר מיד, והרינדור (הכבד) מתבצע רק אחרי הפסקה קצרה בהקלדה – כך התגובה מהירה גם בטבלאות גדולות */
 const SQT = {};
 function sqRun(k, fn) {
-    const a = document.activeElement, had = !!(a && a.id === 'sq-' + k), pos = had ? a.selectionStart : null;
+    const a = document.activeElement, had = !!(a && a.id === 'sq-' + k), pos = had ? a.selectionStart : null, sx = scrollX, sy = scrollY;
     window.__sqBusy = true;
     try { window[fn](); } finally { window.__sqBusy = false; }
-    if (had) { const i = document.getElementById('sq-' + k); if (i && document.activeElement !== i) { i.focus(); const n = pos == null ? i.value.length : Math.min(pos, i.value.length); try { i.setSelectionRange(n, n); } catch (e) {} } }
+    if (scrollX !== sx || scrollY !== sy) scrollTo(sx, sy);
+    if (had) { const i = document.getElementById('sq-' + k); if (i && document.activeElement !== i) { i.focus({ preventScroll: true }); const n = pos == null ? i.value.length : Math.min(pos, i.value.length); try { i.setSelectionRange(n, n); } catch (e) {} } }
 }
 function sqSet(k, f, v, fn) {
     sqS(k)[f] = v; clearTimeout(SQT[k]);
-    if (f === 'q' && v) { SQT[k] = setTimeout(() => sqRun(k, fn), 200); return; }
+    if (f === 'q' && v) { SQT[k] = setTimeout(() => sqRun(k, fn), 300); return; }
     sqRun(k, fn);
 }
 /* נרמול לחיפוש: אותיות קטנות, גרשיים/מרכאות אחידים, רווחים כפולים, תווי כיוון */
@@ -7707,7 +7721,7 @@ function renderReportsNew() {
 (function () {
     const wrapAfter = (name, fn) => { const f = window[name]; if (typeof f !== 'function') return; window[name] = function () { const r = f.apply(this, arguments); try { fn.apply(this, arguments); } catch (e) { console.error('hook ' + name, e); } return r; }; };
     const _sd = window.saveData;
-    window.saveData = function () { try { evTrack(); } catch (e) { console.error('evTrack', e); } return _sd.apply(this, arguments); };
+    window.saveData = function () { window.__evPend = true; return _sd.apply(this, arguments); };
     wrapAfter('loadLocalData', syncAuthFlag);
     wrapAfter('migrateEmployees', () => evReset());   // תיקוני נתונים אוטומטיים של המערכת אינם נרשמים בלוג
     wrapAfter('ensureCategories', () => evReset());
@@ -29549,6 +29563,33 @@ window.yfOpen = open;
 })();
 </script>
 
+<script id="searchSmooth">
+/* חיפוש חלק: בזמן ההקלדה לא מרנדרים כלום; הסינון רץ פעם אחת כשעוצרים להקליד (או ב-Enter), בלי קפיצת גלילה ובלי איבוד פוקוס */
+(function () {
+  const WAIT = 300, T = new Map(), PASS = new WeakSet();
+  const isSearch = t => t && t.tagName === 'INPUT' && (t.type === 'text' || t.type === 'search') && !/^sq-/.test(t.id || '') &&
+    (t.type === 'search' || /חיפוש|חפש|🔍|search/i.test((t.placeholder || '') + ' ' + (t.getAttribute('aria-label') || '')) || /search|Q$/.test(t.id || ''));
+  function fire(t) {
+    clearTimeout(T.get(t)); T.delete(t); if (!t.isConnected) return;
+    const had = document.activeElement === t, id = t.id, s0 = t.selectionStart, s1 = t.selectionEnd, x = scrollX, y = scrollY;
+    const ev = new Event('input', { bubbles: true }); PASS.add(ev); t.dispatchEvent(ev);
+    if (scrollX !== x || scrollY !== y) scrollTo(x, y);
+    if (had && document.activeElement !== t) {
+      const el = t.isConnected ? t : (id && document.getElementById(id));
+      if (el && (!document.activeElement || document.activeElement === document.body)) { el.focus({ preventScroll: true }); try { el.setSelectionRange(s0, s1); } catch (e) { } }
+    }
+  }
+  const later = t => { clearTimeout(T.get(t)); T.set(t, setTimeout(() => fire(t), WAIT)); };
+  addEventListener('input', e => {
+    const t = e.target; if (PASS.has(e) || !e.isTrusted || !isSearch(t)) return;
+    e.stopImmediatePropagation();
+    if (!t.value) { fire(t); return; }   // ניקוי השדה – מיד
+    later(t);
+  }, true);
+  addEventListener('keydown', e => { const t = e.target; if (!T.has(t)) return; if (e.key === 'Enter') fire(t); else later(t); }, true);
+  addEventListener('focusout', e => { if (T.has(e.target)) fire(e.target); }, true);
+})();
+</script>
 <style id="noMotionCss">
 html :is(*,#nm#nm#nm#nm#nm#nm),html :is(*,#nm#nm#nm#nm#nm#nm)::before,html :is(*,#nm#nm#nm#nm#nm#nm)::after{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition:none!important;scroll-behavior:auto!important}
 html,body{scroll-behavior:auto!important}
