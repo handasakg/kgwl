@@ -5046,9 +5046,18 @@ function sqBox(k, cols, fn) {
         <select onchange="sqSet('${k}','c',this.value,'${fn}')" title="חפש בעמודה" class="p-1.5 border rounded-lg text-xs"><option value="">בכל העמודות</option>${cols.map(c => `<option value="${esc(c[0])}" ${st.c === c[0] ? 'selected' : ''}>${esc(c[1])}</option>`).join('')}</select>
         ${st.q ? `<button type="button" onclick="sqSet('${k}','q','','${fn}')" class="text-xs px-2 py-1.5 border rounded-lg hover:bg-gray-100">✕ נקה</button>` : ''}</div>`;
 }
+/* חיפוש: הערך נשמר מיד, והרינדור (הכבד) מתבצע רק אחרי הפסקה קצרה בהקלדה – כך התגובה מהירה גם בטבלאות גדולות */
+const SQT = {};
+function sqRun(k, fn) {
+    const a = document.activeElement, had = !!(a && a.id === 'sq-' + k), pos = had ? a.selectionStart : null;
+    window.__sqBusy = true;
+    try { window[fn](); } finally { window.__sqBusy = false; }
+    if (had) { const i = document.getElementById('sq-' + k); if (i && document.activeElement !== i) { i.focus(); const n = pos == null ? i.value.length : Math.min(pos, i.value.length); try { i.setSelectionRange(n, n); } catch (e) {} } }
+}
 function sqSet(k, f, v, fn) {
-    sqS(k)[f] = v; window[fn]();
-    if (f === 'q' && v) { const i = document.getElementById('sq-' + k); if (i) { i.focus(); try { i.setSelectionRange(v.length, v.length); } catch (e) {} } }
+    sqS(k)[f] = v; clearTimeout(SQT[k]);
+    if (f === 'q' && v) { SQT[k] = setTimeout(() => sqRun(k, fn), 280); return; }
+    sqRun(k, fn);
 }
 /* נרמול לחיפוש: אותיות קטנות, גרשיים/מרכאות אחידים, רווחים כפולים, תווי כיוון */
 const sqNorm = v => String(v == null ? '' : v).toLowerCase().replace(/[\u05F4\u201C\u201D\u201E]/g, '"').replace(/[\u05F3\u2018\u2019`´]/g, "'").replace(/[\u200E\u200F\u202A-\u202E]/g, '').replace(/\s+/g, ' ').trim();
@@ -5140,8 +5149,8 @@ function osVisibleAll(appr) {
     return rows;
 }
 function osVisible(appr) { const rows = osVisibleAll(appr), cols = osRowCols(), k = 'os-' + (appr ? 'approved' : 'status'); return (osCatSel.size ? rows.filter(r => osCatSel.has(osBKey(r))) : rows).filter(r => sqOk(k, cols, r)); }
-const osRowCols = () => [['recvDate', 'תאריך קליטת הזמנה', r => (r.recvDate || '') + ' ' + osDt(r.recvDate)], ['orderNo', 'מספר הזמנה', r => r.orderNo], ['desc', 'תיאור הזמנה', r => r.desc], ['amount', 'סכום ההזמנה', r => (r.amount === '' || r.amount == null) ? '' : r.amount + ' ' + osMoney(r.amount) + ' ' + (() => { try { return osMoney(vatCalc('os', r).t); } catch (e) { return ''; } })()], ['budget', 'סעיף תקציבי', r => { const b = osBud(r.budgetId); return b ? osBudLbl(b) : ''; }], ['sub', 'תת קטגוריה', r => { try { const s = window.subCatOf && subCatOf('os', r); return s ? s.name : ''; } catch (e) { return ''; } }], ['vendor', 'שם ספק (קבלן מבצע)', r => r.vendor || ''], ['contract', 'שם חוזה', r => r.contract || ''], ['status', 'סטטוס הזמנה', r => r.status || ''], ['approvalDate', 'תאריך אישור הזמנה', r => r.approvalDate ? r.approvalDate + ' ' + osDt(r.approvalDate) : ''], ['notes', 'הערות', r => r.notes], ['files', 'קבצים', r => (r.files || []).map(f => f.name).join(' ')]];
-const osBudSCols = () => [['num', 'מספר סעיף', b => b.num], ['name', 'שם סעיף', b => b.name], ['original', 'סכום סעיף תקציבי', b => b.original], ['used', 'נוצל', b => Math.round(osBudStats(b).used)], ['left', 'יתרה', b => Math.round(osBudStats(b).left)]].concat(OS().budCols.map(c => [c.id, c.name, b => (b.extra && b.extra[c.id]) || '']));
+const osRowCols = () => [['recvDate', 'תאריך קליטת הזמנה', r => (r.recvDate || '') + ' ' + osDt(r.recvDate)], ['orderNo', 'מספר הזמנה', r => r.orderNo], ['txAcc', 'חשבון עסקה', r => [r.txAcc || ''].concat(Array.isArray(r.parts) ? r.parts.map(p => p && p.tx || '') : []).join(' ')], ['desc', 'תיאור הזמנה', r => r.desc], ['amount', 'סכום ההזמנה', r => (r.amount === '' || r.amount == null) ? '' : r.amount + ' ' + osMoney(r.amount) + ' ' + (() => { try { return osMoney(vatCalc('os', r).t); } catch (e) { return ''; } })()], ['budget', 'סעיף תקציבי', r => { const b = osBud(r.budgetId); return b ? osBudLbl(b) : ''; }], ['sub', 'תת קטגוריה', r => { try { const s = window.subCatOf && subCatOf('os', r); return s ? s.name : ''; } catch (e) { return ''; } }], ['vendor', 'שם ספק (קבלן מבצע)', r => r.vendor || ''], ['contract', 'שם חוזה', r => r.contract || ''], ['status', 'סטטוס הזמנה', r => r.status || ''], ['approvalDate', 'תאריך אישור הזמנה', r => r.approvalDate ? r.approvalDate + ' ' + osDt(r.approvalDate) : ''], ['notes', 'הערות', r => r.notes], ['files', 'קבצים', r => (r.files || []).map(f => f.name).join(' ')]];
+const osBudSCols = () => [['num', 'מספר סעיף', b => b.num], ['name', 'שם סעיף', b => b.name], ['txAcc', 'חשבון עסקה', b => OS().rows.filter(r => r.budgetId === b.id).map(r => r.txAcc || '').join(' ')], ['original', 'סכום סעיף תקציבי', b => b.original], ['used', 'נוצל', b => Math.round(osBudStats(b).used)], ['left', 'יתרה', b => Math.round(osBudStats(b).left)]].concat(OS().budCols.map(c => [c.id, c.name, b => (b.extra && b.extra[c.id]) || '']));
 const osBudsY = () => OS().budgets.filter(b => Number(b.year) === osY);
 const osBudsShown = () => { const cols = osBudSCols(); return osBudsY().filter(b => sqOk('os-budgets', cols, b)); };
 function osGroups(rows) {
@@ -10429,7 +10438,7 @@ function dsPatch(o) { const s = PG('ds_settings_v2', {}) || {}; Object.assign(s,
 const HLK = 'tbl_hl_v1';
 let HLM = PG(HLK, {}) || {}, hlMode = false, pop = null, cur = null;
 const hlSave = () => PS(HLK, HLM);
-const hlCtx = () => PG('tbl_hl_ctx', true) !== false;
+const hlCtx = () => false; /* קליק ימני לא פותח את חלון הסימון בשום מקום באתר – הסימון דרך כפתור "סימון" שמעל כל טבלה */
 const heads = t => { const h = t.tHead; if (!h || !h.rows.length) return []; return [...h.rows[h.rows.length - 1].cells].map(c => txt(c)); };
 function tKey(t) { const v = t.closest('.view-content,[id]'); const hs = heads(t).join('|').slice(0, 160); let k = (v ? v.id : '') + '#' + hs; if (!hs) k += [...(v || document).querySelectorAll('table')].indexOf(t); return k; }
 function rKey(tr) {
@@ -10518,11 +10527,7 @@ function popInput(e) {
     else if (t.hasAttribute('data-to')) setStyle('o', t.checked ? 'rgb(' + getComputedStyle(R).getPropertyValue('--ac-600').trim().replace(/\s+/g, ',') + ')' : '');
 }
 const CELL_OK = c => c && c.closest('table') && !c.closest('#uxPop,#dsPanel,#noaPanel,#chatPanel,#uxIcPick,#stHead');
-document.addEventListener('contextmenu', e => {
-    if (e.ctrlKey || !hlCtx()) return;
-    const c = e.target.closest && e.target.closest('td,th'); if (!CELL_OK(c) || e.target.closest('input,textarea,select')) return;
-    e.preventDefault(); openPop(c, e.clientX, e.clientY);
-});
+/* קליק ימני: תמיד התפריט הרגיל של הדפדפן – חלון הסימון לא נפתח (בוטל בכל האתר) */
 document.addEventListener('click', e => {
     if (pop && !pop.contains(e.target)) { const c0 = e.target.closest && e.target.closest('td,th'); if (!(hlMode && CELL_OK(c0))) closePop(); }
     if (!hlMode) return;
@@ -10638,14 +10643,18 @@ function hlHeading(t) {
     return hs.length ? hs[hs.length - 1] : null;
 }
 const hlBtnHtml = () => `<button type="button" class="hl-tbtn${hlMode ? ' on' : ''}" aria-pressed="${hlMode}" title="סימון וצביעה של שורות, עמודות ותאים בטבלה"><i class="fa-solid fa-highlighter"></i>${hlCfg().btnIcon ? '' : '<span>סימון</span>'}</button>`;
+/* הכפתורים מעל הטבלאות מוצגים תמיד (הופעלו מחדש גם אם כובו בעבר) */
+if (!PG('hl_btns_force_v1', false)) { try { hlCfgSet('btns', true); PS('hl_btns_force_v1', true); } catch (e) { } }
+/* כפתור "סימון" קטן מעל כל טבלה: הטבלה הראשונה מתחת לכותרת – בכותרת; כל טבלה נוספת – בפס קטן ממש מעליה */
 function hlBtns() {
     const on = hlCfg().btns;
     if (!on) { document.querySelectorAll('.hl-tbtn,.hl-tbar').forEach(x => x.remove()); return; }
+    const used = new Set();
     tblsAll().forEach(t => {
-        const h = hlHeading(t);
-        if (h) { if (!h.querySelector('.hl-tbtn')) h.insertAdjacentHTML('beforeend', hlBtnHtml()); return; }
         const w = t.closest('.overflow-x-auto') || t, pv = w.previousElementSibling;
         if (pv && pv.classList.contains('hl-tbar')) return;
+        const h = hlHeading(t);
+        if (h && !used.has(h)) { used.add(h); if (!h.querySelector('.hl-tbtn')) h.insertAdjacentHTML('beforeend', hlBtnHtml()); return; }
         w.insertAdjacentHTML('beforebegin', '<div class="hl-tbar">' + hlBtnHtml() + '</div>');
     });
 }
@@ -10685,7 +10694,7 @@ window.dsHlHtml = function () {
     hlList = hlFlat();
     const sel = (id, opts, v) => `<select id="${id}" data-uxs="${id}" style="margin-top:4px">${opts.map(([a, l]) => `<option value="${esc(a)}" ${a === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     return `<div class="ds-h">🖍 מצב ותצוגה</div>
-    <div class="ux-row">${btn('hlmode', hlMode ? '✓ מצב סימון פעיל' : '🖍 הפעלת מצב סימון', hlMode)}${btn('hlctx', hlCtx() ? '✓ קליק ימני על תא פותח סימון' : 'קליק ימני על תא: כבוי', hlCtx())}</div>
+    <div class="ux-row">${btn('hlmode', hlMode ? '✓ מצב סימון פעיל' : '🖍 הפעלת מצב סימון', hlMode)}</div>
     <div class="ux-row">${btn('hlc:btns:' + !c.btns, c.btns ? '✓ כפתור "סימון" ליד כותרת כל טבלה' : 'כפתור ליד כותרות הטבלאות: מוסתר', c.btns)}${btn('hlc:btnIcon:' + !c.btnIcon, c.btnIcon ? 'הכפתור: אייקון בלבד' : 'הכפתור: אייקון וטקסט', false)}</div>
     <div class="ds-note">בכל לשונית מופיע כפתור "סימון" ליד כותרת הטבלה (או מעליה, אם אין לה כותרת). לחיצה מפעילה מצב סימון, ואז לוחצים על תא ובוחרים צבע לתא, לשורה או לעמודה.</div>
     <div class="ds-h">🎨 צבעי הסימון (מופיעים בחלון הסימון)</div>
@@ -10987,7 +10996,7 @@ function uiCmd(q) {
         return { h: (fsUp ? '🔠 הגדלתי' : '🔡 הקטנתי') + ' את הכתב ל-' + v + '%.', c: [{ q: 'הגדילי כתב', l: 'עוד יותר גדול' }, { q: 'הקטיני כתב', l: 'קטן יותר' }] };
     }
     if (/(סמני|סימון|לצבוע|צבעי|תצבעי|הדגיש|הדגשה|מרקר)/.test(q) && /(שורה|שורות|עמודה|עמודות|תא|טבלה|טבלאות|הדגשה|סימון)/.test(q) && !/נקי|מחקי|תמחקי/.test(q)) {
-        U.setHlMode && U.setHlMode(true); return { h: '🖍 הפעלתי מצב סימון. לחצו על תא בטבלה ובחרו לצבוע את התא, את כל השורה או את כל העמודה. אפשר גם בכל זמן: קליק ימני על תא.' };
+        U.setHlMode && U.setHlMode(true); return { h: '🖍 הפעלתי מצב סימון. לחצו על תא בטבלה ובחרו לצבוע את התא, את כל השורה או את כל העמודה. אפשר גם בכל זמן: כפתור "סימון" שמעל כל טבלה.' };
     }
     if (/(נקי|מחקי|תמחקי|הסירי).*(סימונ|צבע)/.test(q)) { return { h: 'ניקוי כל הסימונים נמצא ב"עיצוב ונגישות" ← צבעים ← "ניקוי כל הסימונים". אפשר גם קליק ימני על תא ← "נקה את כל הטבלה".' }; }
     if (/(אייקון|אייקונים|סמל|סמלים|איקון)/.test(q) && /(שנ|ערוך|ערכי|תערכי|החליפ|תחליפ|לשנות|להחליף)/.test(q)) { U.setIcMode && U.setIcMode(true); return { h: '✏️ הפעלתי עריכת אייקונים. לחצו על כל אייקון באתר ובחרו אייקון וצבע חדשים. לסיום לחצו "סיום" בתחתית המסך.' }; }
@@ -12865,7 +12874,7 @@ window.saveOrder = async function () {
     return res;
 };
 /* רענון הכרטיסים כשהיתרה משתנה בסטטוס הזמנות */
-const _ros = window.renderOrdStatus; if (typeof _ros === 'function') window.renderOrdStatus = function () { const r = _ros.apply(this, arguments); try { renderOrders(); } catch (e) { } return r; };
+const _ros = window.renderOrdStatus; if (typeof _ros === 'function') window.renderOrdStatus = function () { const r = _ros.apply(this, arguments); if (!window.__sqBusy) { try { renderOrders(); } catch (e) { } } return r; };
 try { renderOrders(); } catch (e) { }
 })();
 </script>
@@ -29286,6 +29295,10 @@ html[data-mode=dark] #yfDlg .yf-sb:hover{color:#fff}
 html body #yfDlg td input.yf-in{width:100%!important;min-width:90px;box-sizing:border-box;padding:7px 9px!important;border:1.5px solid var(--border,#d1d5db)!important;border-radius:8px!important;background:var(--surface,#fff)!important;color:var(--text,#111)!important;font-size:14px!important;margin:0!important}
 html body #yfDlg td input.yf-in:focus{border-color:rgb(var(--ac-600))!important;box-shadow:0 0 0 3px rgb(var(--ac-500) / .2)!important;outline:0}
 html body #yfDlg td input.yf-in[data-k=amt]{direction:ltr;text-align:right;font-weight:700}
+#yfDlg td.w-ovh{width:150px}
+html body #yfDlg td input.yf-in[data-k=ovm]{direction:ltr;text-align:right;font-weight:700}
+html body #yfDlg td input.yf-in.yf-ovm.man{border-color:#d97706!important;background:#fffbeb!important}
+html[data-mode=dark] body #yfDlg td input.yf-in.yf-ovm.man{background:rgb(217 119 6 / .15)!important}
 #yfDlg td.w-desc{min-width:180px}#yfDlg td.w-date{width:150px}#yfDlg td.w-inv{width:170px}#yfDlg td.w-amt{width:160px}
 #yfDlg .yf-rx{all:unset;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;cursor:pointer;color:var(--text-3,#9ca3af)}
 #yfDlg .yf-rx:hover{background:#ef4444;color:#fff}
@@ -29362,15 +29375,18 @@ function newSheet(name) {
 function cur() { const d = D(); let s = d.sheets.find(x => x.id === d.cur) || d.sheets[d.sheets.length - 1]; if (!s) s = newSheet(); d.cur = s.id; if (!Array.isArray(s.rows)) s.rows = []; return s; }
 const ovN = s => (s.ovh === '' || s.ovh == null || isNaN(Number(s.ovh)) || Number(s.ovh) === 0) ? null : Number(s.ovh);
 const filled = r => String(r.inv || '').trim() || String(r.desc || '').trim() || String(r.amt == null ? '' : r.amt).trim() !== '';
+/* תקורה ידנית לשורה (r.ovm, ב-₪): כשמולאה – גוברת על החישוב לפי האחוז */
+const manOv = r => r.ovm !== '' && r.ovm != null && String(r.ovm).trim() !== '' && isFinite(Number(r.ovm));
 function rc(s, r) {
-  const amt = r2(num(r.amt)), vat = r2(amt * (Number(s.vat) || 0) / 100), after = r2(amt + vat), op = ovN(s), ovh = op == null ? null : r2(after * op / 100);
-  return { amt, vat, after, ovh, total: r2(after + (ovh || 0)) };
+  const amt = r2(num(r.amt)), vat = r2(amt * (Number(s.vat) || 0) / 100), after = r2(amt + vat), op = ovN(s), auto = op == null ? null : r2(after * op / 100);
+  const man = manOv(r), ovh = man ? r2(Number(r.ovm)) : auto;
+  return { amt, vat, after, ovh, auto, man, total: r2(after + (ovh || 0)) };
 }
 function calc(s) {
   const before = r2(s.rows.reduce((a, r) => a + num(r.amt), 0));
   const vp = Number(s.vat) || 0, vat = r2(before * vp / 100), after = r2(before + vat);
-  const op = ovN(s), ovh = op == null ? null : r2(after * op / 100);
-  return { before, vp, vat, after, op, ovh, total: r2(after + (ovh || 0)) };
+  const op = ovN(s), anyMan = s.rows.some(manOv), ovh = (op == null && !anyMan) ? null : r2(s.rows.reduce((a, r) => a + (rc(s, r).ovh || 0), 0));
+  return { before, vp, vat, after, op, anyMan, ovh, total: r2(after + (ovh || 0)) };
 }
 
 let tSave = 0; const saveLater = () => { clearTimeout(tSave); tSave = setTimeout(() => { try { saveData(); } catch (e) { } }, 500); };
@@ -29382,7 +29398,13 @@ function sumHtml(s, ed) {
     <div class="yf-sr"><span class="l">תקורה <input type="number" step="any" min="0" class="yf-pc" data-yf="ovh" value="${c.op == null ? '' : c.op}" placeholder="—" ${ed ? '' : 'disabled'} title="אחוז תקורה (× הסכום אחרי מע&quot;מ)">%
       ${ed ? '<button type="button" class="yf-mini" data-yf="ovdef" title="לשמור את האחוז הנוכחי כברירת מחדל לטבלאות חדשות">קבע כברירת מחדל</button>' : ''}</span></div>`;
 }
-function cells(s, r) { const c = rc(s, r); return `<td class="cm" data-c="vat">${M(c.vat)}</td><td class="cm${c.ovh == null ? ' mute' : ''}" data-c="ovh">${c.ovh == null ? '—' : M(c.ovh)}</td><td class="cm tot" data-c="total">${M(c.total)}</td>`; }
+const ovPh = c => c.auto == null ? 'ידני ₪' : 'אוטו׳ ' + M(c.auto);
+function cells(s, r, ed) {
+  const c = rc(s, r);
+  const ov = ed ? `<td class="w-ovh" data-c="ovh"><input class="yf-in yf-ovm${c.man ? ' man' : ''}" type="number" step="any" inputmode="decimal" data-k="ovm" value="${E(r.ovm == null ? '' : r.ovm)}" placeholder="${E(ovPh(c))}" title="תקורה ידנית לשורה הזו (₪). השאר ריק לחישוב אוטומטי לפי האחוז"></td>`
+    : `<td class="cm${c.ovh == null ? ' mute' : ''}" data-c="ovh">${c.ovh == null ? '—' : M(c.ovh)}</td>`;
+  return `<td class="cm" data-c="vat">${M(c.vat)}</td>${ov}<td class="cm tot" data-c="total">${M(c.total)}</td>`;
+}
 function draw(focus) {
   const d = D(), s = cur(), ed = canE();
   $('yfBox').innerHTML = `<div class="yf-h"><i class="fa-solid fa-file-invoice-dollar"></i><span class="yf-ht" id="yfTtl">חשבונות יפתח<small>טבלה למילוי · ${E(s.name)}</small></span><button type="button" class="yf-x" data-yf="x" title="סגירה" aria-label="סגירה"><i class="fa-solid fa-xmark"></i></button></div>
@@ -29398,10 +29420,10 @@ function draw(focus) {
         <td class="w-inv"><input class="yf-in" data-k="inv" value="${E(r.inv || '')}" placeholder="מספר חשבונית" ${ed ? '' : 'disabled'}></td>
         <td class="w-desc"><input class="yf-in" data-k="desc" value="${E(r.desc || '')}" placeholder="תיאור" ${ed ? '' : 'disabled'}></td>
         <td class="w-amt"><input class="yf-in" type="number" step="any" inputmode="decimal" data-k="amt" value="${E(r.amt == null ? '' : r.amt)}" placeholder="0.00" ${ed ? '' : 'disabled'}></td>
-        ${cells(s, r)}
+        ${cells(s, r, ed)}
         ${ed ? `<td class="d"><button type="button" class="yf-rx" data-yf="rx" title="מחיקת שורה" aria-label="מחיקת שורה"><i class="fa-solid fa-trash-can"></i></button></td>` : ''}</tr>`).join('')}</tbody></table></div>
       ${ed ? '<button type="button" class="yf-addr" data-yf="add"><i class="fa-solid fa-plus"></i> הוספת שורה</button>' : ''}
-      <div class="yf-tip">סכום החשבון נרשם לפני מע"מ. בכל שורה מחושבים מע"מ, תקורה (האחוז שתזין × הסכום אחרי מע"מ) וסכום כולל מע"מ (כולל התקורה). אם אין תקורה – העמודה לא תופיע ב-PDF. Enter בשדה הסכום מוסיף שורה חדשה.</div>
+      <div class="yf-tip">סכום החשבון נרשם לפני מע"מ. בכל שורה מחושבים מע"מ, תקורה (האחוז שתזין × הסכום אחרי מע"מ) וסכום כולל מע"מ (כולל התקורה). אפשר לרשום תקורה ידנית (₪) בשורה מסוימת בעמודת התקורה – היא גוברת על החישוב האוטומטי; ריק = אוטומטי. אם אין תקורה – העמודה לא תופיע ב-PDF. Enter בשדה הסכום מוסיף שורה חדשה.</div>
       <div class="yf-nf"><div><label for="yfNotes">הערות (יופיעו מתחת לטבלה)</label><textarea id="yfNotes" data-yf="notes" ${ed ? '' : 'disabled'}>${E(s.notes || '')}</textarea></div>
         <div><label for="yfAppr">גורם מאשר (בצד שמאל)</label><input id="yfAppr" data-yf="appr" value="${E(s.appr || '')}" placeholder="שם ותפקיד" ${ed ? '' : 'disabled'}></div></div>
     </div>
@@ -29412,7 +29434,9 @@ function refreshSum() {
   const s = cur(), b = $('yfBox'), vp = b.querySelector('[data-yfv="vp"]'); if (vp) vp.textContent = calc(s).vp;
   const ths = b.querySelectorAll('thead th'); if (ths[5]) ths[5].textContent = `מע"מ (${calc(s).vp}%)`; if (ths[6]) ths[6].textContent = 'תקורה' + (ovN(s) == null ? '' : ' (' + ovN(s) + '%)');
   b.querySelectorAll('tbody tr[data-id]').forEach(tr => { const r = s.rows.find(x => x.id === tr.dataset.id); if (!r) return; const c = rc(s, r);
-    tr.querySelector('[data-c="vat"]').textContent = M(c.vat); const o = tr.querySelector('[data-c="ovh"]'); o.textContent = c.ovh == null ? '—' : M(c.ovh); o.classList.toggle('mute', c.ovh == null); tr.querySelector('[data-c="total"]').textContent = M(c.total); });
+    tr.querySelector('[data-c="vat"]').textContent = M(c.vat); const o = tr.querySelector('[data-c="ovh"]'), oi = o.querySelector('input');
+    if (oi) { oi.placeholder = ovPh(c); oi.classList.toggle('man', c.man); } else { o.textContent = c.ovh == null ? '—' : M(c.ovh); o.classList.toggle('mute', c.ovh == null); }
+    tr.querySelector('[data-c="total"]').textContent = M(c.total); });
 }
 function addRow() { const s = cur(), last = s.rows[s.rows.length - 1]; const r = { id: uid(), date: (last && last.date) || today(), inv: '', desc: '', amt: '' }; s.rows.push(r); saveNow(); draw(`tr[data-id="${r.id}"] [data-k="inv"]`); }
 
@@ -29449,7 +29473,7 @@ box.addEventListener('change', e => {
 });
 box.addEventListener('input', e => {
   const t = e.target, s = cur();
-  if (t.dataset.k) { const r = s.rows.find(x => x.id === t.closest('tr').dataset.id); if (!r) return; r[t.dataset.k] = t.value; if (t.dataset.k === 'amt') refreshSum(); saveLater(); }
+  if (t.dataset.k) { const r = s.rows.find(x => x.id === t.closest('tr').dataset.id); if (!r) return; r[t.dataset.k] = t.value; if (t.dataset.k === 'amt' || t.dataset.k === 'ovm') refreshSum(); saveLater(); }
   else if (t.dataset.yf === 'ovh') { s.ovh = t.value === '' ? '' : Number(t.value); refreshSum(); saveLater(); }
   else if (t.dataset.yf === 'notes') { s.notes = t.value; saveLater(); }
   else if (t.dataset.yf === 'appr') { s.appr = t.value; saveLater(); }
@@ -29465,13 +29489,13 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('yfDlg'
 function exportPdf() {
   saveNow();
   const s = cur(), L = s.rows.filter(filled); if (!L.length) return note('ℹ️ אין שורות מלאות לייצוא');
-  const c = calc(s), hasO = c.op != null;
+  const c = calc(s), hasO = c.op != null || L.some(manOv);
   const td = 'border:1px solid #94a3b8;padding:6px 8px', th = td + ';background:#0f2742;color:#fff;font-weight:700;text-align:right';
   const mm = v => `<td style="${td};direction:ltr;text-align:right;white-space:nowrap">${M(v)}</td>`;
   const el = document.createElement('div'); el.dir = 'rtl'; el.style.cssText = 'font-family:Assistant,Arial,sans-serif;color:#111827;font-size:12px';
   el.innerHTML = `<h2 style="margin:0 0 4px;font-size:20px">${E(s.name)}</h2><div style="color:#475569;margin-bottom:12px">תאריך הפקה: ${new Date().toLocaleDateString('he-IL')}</div>
-    <table style="border-collapse:collapse;width:100%"><thead><tr>${['מספור', 'תאריך', 'חשבונית עסקה', 'תיאור', 'סכום חשבון', `מע"מ (${c.vp}%)`].concat(hasO ? [`תקורה (${c.op}%)`] : []).concat(['סכום כולל מע"מ']).map(h => `<th style="${th}">${h}</th>`).join('')}</tr></thead><tbody>
-    ${L.map((r, i) => `<tr${i % 2 ? ' style="background:#f1f5f9"' : ''}><td style="${td};text-align:center">${i + 1}</td><td style="${td};white-space:nowrap">${E(dFmt(r.date))}</td><td style="${td}">${E(r.inv || '')}</td><td style="${td}">${E(r.desc || '')}</td>${(() => { const x = rc(s, r); return mm(x.amt) + mm(x.vat) + (hasO ? mm(x.ovh) : '') + mm(x.total); })()}</tr>`).join('')}
+    <table style="border-collapse:collapse;width:100%"><thead><tr>${['מספור', 'תאריך', 'חשבונית עסקה', 'תיאור', 'סכום חשבון', `מע"מ (${c.vp}%)`].concat(hasO ? [c.op != null ? `תקורה (${c.op}%)` : 'תקורה'] : []).concat(['סכום כולל מע"מ']).map(h => `<th style="${th}">${h}</th>`).join('')}</tr></thead><tbody>
+    ${L.map((r, i) => `<tr${i % 2 ? ' style="background:#f1f5f9"' : ''}><td style="${td};text-align:center">${i + 1}</td><td style="${td};white-space:nowrap">${E(dFmt(r.date))}</td><td style="${td}">${E(r.inv || '')}</td><td style="${td}">${E(r.desc || '')}</td>${(() => { const x = rc(s, r); return mm(x.amt) + mm(x.vat) + (hasO ? (x.ovh == null ? `<td style="${td};text-align:center">—</td>` : mm(x.ovh)) : '') + mm(x.total); })()}</tr>`).join('')}
     </tbody></table>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:30px;margin-top:22px">
       <div style="flex:1"><div style="font-weight:700;margin-bottom:6px">הערות:</div>${(s.notes || '').trim() ? `<div style="white-space:pre-wrap;line-height:1.6">${E(s.notes.trim())}</div>` : '<div style="border-bottom:1px solid #94a3b8;height:22px"></div><div style="border-bottom:1px solid #94a3b8;height:22px"></div>'}</div>
