@@ -13509,7 +13509,7 @@ function addOvhCols(d, rs, bs) {
 }
 const lr = x => [x.no, x.r.year, x.r.approvalDate || '', x.r.billNo || '', x.r.desc || '', x.r.entity || '', Number(x.r.amount) || 0, blOvhAmt(x.r), blPct(x.r) + '%', blVatAmt(x.r), blVatRate(x.r) + '%', blPay(x.r), x.bal];
 function ledTable(b, l, pdf, noEnt) {
-    const hl = 'background:#fef08a; font-weight:bold;', o = hasO(l), H = (o ? LH : LH.filter(h => h !== 'תקורה ₪')).filter(h => !noEnt || h !== 'גורם'), hs = lastDateIdx(l, r => r.approvalDate);
+    const hl = 'background:#fef08a; font-weight:bold;', o = hasO(l), H = (o ? LH : LH.filter(h => h !== 'תקורה ₪')).filter(h => !noEnt || h !== 'גורם'), hs = new Set(); /* בוטלה הצביעה בצהוב של השורה האחרונה / תאריך האישור האחרון */
     return `<table style="width:100%; border-collapse:collapse; font-size:11px; direction:rtl; text-align:right;"><thead><tr style="background:#e2e8f0;">${H.map(h => `<th style="${td}">${thV(h)}</th>`).join('')}</tr></thead><tbody>
     ${b && !pdf ? `<tr style="background:#f8fafc;"><td style="${td}" colspan="${H.length - 1}">סכום סעיף תקציבי</td><td style="${td}"><b>${fMoney(b.original)}</b></td></tr>` : ''}
     ${l.map((x, i) => `<tr${pdf && hs.has(i) ? ` style="${hl}"` : ''}><td style="${td}">${x.no}</td><td style="${td}">${E(x.r.year)}</td><td style="${td}">${dt(x.r.approvalDate)}</td><td style="${td}">${E(x.r.billNo)}</td><td style="${td}">${E(x.r.desc)}</td>${noEnt ? '' : `<td style="${td}">${E(x.r.entity || '-')}</td>`}<td style="${td}">${fMoney(Number(x.r.amount) || 0)}</td>${o ? `<td style="${td}">${fMoney(blOvhAmt(x.r))}<div style="font-size:9px; color:#64748b; line-height:1.2;">${E(blPct(x.r))}%</div></td>` : ''}<td style="${td}">${fMoney(blVatAmt(x.r))}<div style="font-size:9px; color:#64748b; line-height:1.2;">${E(blVatRate(x.r))}%</div></td><td style="${td}">${fMoney(blPay(x.r))}</td><td style="${td}">${b && x.bal !== '' ? fMoney(x.bal) : '-'}</td></tr>`).join('')}</tbody></table>`;
@@ -22444,7 +22444,7 @@ window.rpDef = function (kind, opt) {
         const hl = 'background:#fef08a; font-weight:bold;', H = o ? LH : LH.filter(h => h !== 'תקורה ₪');
         /* צביעה בצהוב: השורות עם התאריך האחרון (מאושרות – תאריך אישור, סטטוס הזמנות – תאריך קליטה); כמה באותו תאריך – כולן */
         const ds = l.map(x => String(dOf(x.r) || '')), mx = ds.reduce((a, d) => d > a ? d : a, '');
-        const hs = new Set(mx ? ds.map((d, i) => d === mx ? i : -1).filter(i => i >= 0) : l.length ? [l.length - 1] : []);
+        const hs = new Set(); /* בוטלה הצביעה בצהוב של השורה האחרונה / התאריך האחרון */
         return `<table style="width:100%; border-collapse:collapse; font-size:11px; direction:rtl; text-align:right;"><thead><tr style="background:#e2e8f0;">${H.map(h => `<th style="${td}">${thV(h)}</th>`).join('')}</tr></thead><tbody>
         ${l.map((x, i) => { const c = vat(x.r); return `<tr${hs.has(i) ? ` style="${hl}"` : ''}><td style="${td}">${x.no}</td><td style="${td}">${E(x.r.year)}</td><td style="${td}">${dt(dOf(x.r))}</td><td style="${td}">${E(x.r.orderNo)}</td><td style="${td}">${E(x.r.desc)}</td><td style="${td}">${fMoney(Number(x.r.amount) || 0)}</td>${o ? `<td style="${td}">${fMoney(osOvhAmt(x.r))}<div style="font-size:9px; color:#64748b; line-height:1.2;">${E(osPct(x.r))}%</div></td>` : ''}<td style="${td}">${fMoney(c.v)}<div style="font-size:9px; color:#64748b; line-height:1.2;">${E(c.p || 0)}%</div></td><td style="${td}">${fMoney(tot(x.r))}</td><td style="${td}">${b && x.bal !== '' ? fMoney(x.bal) : '-'}</td></tr>`; }).join('')}</tbody></table>`;
     };
@@ -29377,6 +29377,8 @@ html body #yfDlg .yf-nf textarea,html body #yfDlg .yf-nf input{width:100%!import
 #yfDlg .yf-f button.yf-pdf{background:#dc2626;color:#fff}
 #yfDlg .yf-f button.yf-pdf:hover{background:#b91c1c}
 #yfDlg .yf-f button.yf-cl{background:var(--surface,#fff);border:1.5px solid var(--border,#d1d5db);color:var(--text,#111)}
+#yfDlg .yf-amt-n{font-size:10.5px;font-weight:600;color:var(--text-3,#6b7280);margin-top:3px;white-space:nowrap;line-height:1.2}
+#yfDlg .yf-calc{margin-inline-start:auto;align-self:center}
 .yf-open-btn{background:#0d9488;color:#fff}
 .yf-open-btn:hover{background:#0f766e}
 </style>
@@ -29398,6 +29400,21 @@ const today = () => { const d = new Date(); return d.getFullYear() + '-' + Strin
 const dFmt = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : (s || ''); };
 const num = v => { const n = Number(String(v == null ? '' : v).replace(/[,₪\s]/g, '')); return isFinite(n) ? n : 0; };
 const canE = () => { try { return can('bill_edit'); } catch (e) { return true; } };
+/* סכום חשבון עם פסיקים (1,234,567.89) – נשמר בלי פסיקים */
+const fmtA = v => {
+  let t = String(v == null ? '' : v).replace(/[^\d.\-]/g, ''); if (!t) return '';
+  const neg = t[0] === '-'; t = t.replace(/-/g, '');
+  const i = t.indexOf('.'); let a = i < 0 ? t : t.slice(0, i); const b = i < 0 ? '' : '.' + t.slice(i + 1).replace(/\./g, '');
+  a = a.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (neg ? '-' : '') + a + b;
+};
+function amtInput(t) {
+  const pos = t.selectionStart == null ? t.value.length : t.selectionStart, keep = t.value.slice(0, pos).replace(/,/g, '').length;
+  const f = fmtA(t.value); t.value = f;
+  let n = 0, p = 0; while (p < f.length && n < keep) { if (f[p] !== ',') n++; p++; }
+  try { t.setSelectionRange(p, p); } catch (e) { }
+  return f.replace(/,/g, '');
+}
 
 /* נתונים: appData.bills.yfm = { vat, ovh, cur, sheets:[{id,name,created,rows:[{id,date,inv,desc,amt}],vat,ovh,notes,appr}] } */
 function D() {
@@ -29457,13 +29474,13 @@ function draw(focus) {
       <button type="button" class="yf-sb" data-yf="ren"><i class="fa-solid fa-pen"></i> שינוי שם</button>
       <button type="button" class="yf-sb dl" data-yf="del"><i class="fa-solid fa-trash"></i> מחיקת טבלה</button>` : ''}</div>
     <div class="yf-b">
-      <div class="yf-sum" id="yfSum">${sumHtml(s, ed)}</div>
+      <div class="yf-sum" id="yfSum">${sumHtml(s, ed)}<button type="button" class="yf-sb yf-calc" data-yf="calc" title="מחשבון"><i class="fa-solid fa-calculator"></i> מחשבון</button></div>
       <div class="yf-tw"><table><thead><tr><th style="text-align:center">מספור</th><th>תאריך</th><th>חשבונית עסקה</th><th>תיאור</th><th>סכום חשבון</th><th>מע"מ (${calc(s).vp}%)</th><th>תקורה${ovN(s) == null ? '' : ' (' + ovN(s) + '%)'}</th><th>סכום כולל מע"מ</th>${ed ? '<th></th>' : ''}</tr></thead>
       <tbody>${s.rows.map((r, i) => `<tr data-id="${E(r.id)}"><td class="n">${i + 1}</td>
         <td class="w-date"><input class="yf-in" type="date" data-k="date" value="${E(r.date || '')}" ${ed ? '' : 'disabled'}></td>
         <td class="w-inv"><input class="yf-in" data-k="inv" value="${E(r.inv || '')}" placeholder="מספר חשבונית" ${ed ? '' : 'disabled'}></td>
         <td class="w-desc"><input class="yf-in" data-k="desc" value="${E(r.desc || '')}" placeholder="תיאור" ${ed ? '' : 'disabled'}></td>
-        <td class="w-amt"><input class="yf-in" type="number" step="any" inputmode="decimal" data-k="amt" value="${E(r.amt == null ? '' : r.amt)}" placeholder="0.00" ${ed ? '' : 'disabled'}></td>
+        <td class="w-amt"><input class="yf-in" type="text" inputmode="decimal" autocomplete="off" data-k="amt" value="${E(fmtA(r.amt))}" placeholder="0.00" ${ed ? '' : 'disabled'}><div class="yf-amt-n">חשבון ללא מע"מ</div></td>
         ${cells(s, r, ed)}
         ${ed ? `<td class="d"><button type="button" class="yf-rx" data-yf="rx" title="מחיקת שורה" aria-label="מחיקת שורה"><i class="fa-solid fa-trash-can"></i></button></td>` : ''}</tr>`).join('')}</tbody></table></div>
       ${ed ? '<button type="button" class="yf-addr" data-yf="add"><i class="fa-solid fa-plus"></i> הוספת שורה</button>' : ''}
@@ -29491,6 +29508,7 @@ const box = $('yfBox');
 box.addEventListener('click', e => {
   const t = e.target.closest('[data-yf]'); if (!t) return; const a = t.dataset.yf, d = D(), s = cur();
   if (a === 'x') close();
+  else if (a === 'calc') { try { calcOpen(); const m = $('calcModal'); if (m) m.style.zIndex = 200; } catch (er) { note('⚠️ המחשבון לא זמין'); } }
   else if (a === 'pdf') exportPdf();
   else if (a === 'add') addRow();
   else if (a === 'rx') {
@@ -29517,7 +29535,7 @@ box.addEventListener('change', e => {
 });
 box.addEventListener('input', e => {
   const t = e.target, s = cur();
-  if (t.dataset.k) { const r = s.rows.find(x => x.id === t.closest('tr').dataset.id); if (!r) return; r[t.dataset.k] = t.value; if (t.dataset.k === 'amt' || t.dataset.k === 'ovm') refreshSum(); saveLater(); }
+  if (t.dataset.k) { const r = s.rows.find(x => x.id === t.closest('tr').dataset.id); if (!r) return; r[t.dataset.k] = t.dataset.k === 'amt' ? amtInput(t) : t.value; if (t.dataset.k === 'amt' || t.dataset.k === 'ovm') refreshSum(); saveLater(); }
   else if (t.dataset.yf === 'ovh') { s.ovh = t.value === '' ? '' : Number(t.value); refreshSum(); saveLater(); }
   else if (t.dataset.yf === 'notes') { s.notes = t.value; saveLater(); }
   else if (t.dataset.yf === 'appr') { s.appr = t.value; saveLater(); }
@@ -29528,7 +29546,8 @@ box.addEventListener('keydown', e => {
   if (i === s.rows.length - 1) addRow(); else { const n = box.querySelector(`tr[data-id="${s.rows[i + 1].id}"] [data-k="inv"]`); if (n) n.focus(); }
 });
 $('yfDlg').addEventListener('click', e => { if (e.target.id === 'yfDlg') close(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('yfDlg').hidden && !document.querySelector('#xpv:not([hidden])')) { e.stopPropagation(); close(); } }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('calcModal') && !$('calcModal').classList.contains('hidden') && !$('yfDlg').hidden) { e.stopPropagation(); calcClose(); return; }
+  if (e.key === 'Escape' && !$('yfDlg').hidden && !document.querySelector('#xpv:not([hidden])')) { e.stopPropagation(); close(); } }, true);
 
 function exportPdf() {
   saveNow();
