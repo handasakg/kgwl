@@ -29898,7 +29898,7 @@ async function onPortalClick(e) {
   if (a === 'send') return send();
   if (a === 'get') {
     const { f } = findF(b.dataset.r, b.dataset.k); if (!f || !f.deliv || f.deliv.conf) return renderPortalLists();
-    if (f.deliv.kind === 'link') window.open(f.deliv.url, '_blank', 'noopener'); else { const x = dFiles(f.deliv)[+b.dataset.i || 0]; if (x) fileOpen(x.fid); }
+    if (f.deliv.kind === 'link') { if (f.deliv.fid) fileOpen(f.deliv.fid); else window.open(f.deliv.url, '_blank', 'noopener'); } else { const x = dFiles(f.deliv)[+b.dataset.i || 0]; if (x) fileOpen(x.fid); }
     opened.add(b.dataset.r + '|' + b.dataset.k); renderPortalLists(); return;
   }
   if (a === 'conf') {
@@ -30020,7 +30020,7 @@ function fileRow(r, f, num) {
       : (!d ? `<button type="button" class="lgp-btn o s" data-a="undo" data-r="${r.id}" data-k="${f.k}" title="החזרה לממתין"><i class="fa-solid fa-rotate-left"></i></button>` : '')}
     ${f.st === 'rej' ? `<div class="lgp-why x"><b>סיבת הדחייה:</b> ${E(f.why || '-')}</div>` : ''}
     ${f.st === 'ok' ? (d ? `<div class="lgp-why ${d.conf ? 'k' : ''}" style="${d.conf ? '' : 'background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3'}">
-        ${d.kind === 'link' ? `<i class="fa-solid fa-link"></i> נשלח קישור לצפייה בלבד: <a href="${E(d.url)}" target="_blank" rel="noopener" style="text-decoration:underline">${E(d.url.length > 60 ? d.url.slice(0, 60) + '…' : d.url)}</a>`
+        ${d.kind === 'link' ? (d.fid ? `<i class="fa-solid fa-link"></i> נשלח קישור לצפייה בלבד לקובץ מהמערכת: <a href="#" data-a="lview" data-r="${r.id}" data-k="${f.k}" style="text-decoration:underline">${E(d.fname || 'קובץ')}</a>` : `<i class="fa-solid fa-link"></i> נשלח קישור לצפייה בלבד: <a href="${E(d.url)}" target="_blank" rel="noopener" style="text-decoration:underline">${E(d.url.length > 60 ? d.url.slice(0, 60) + '…' : d.url)}</a>`)
           : `<i class="fa-solid fa-paperclip"></i> צורפו: ${dFiles(d).map((x, i) => `<a href="#" data-a="dview" data-i="${i}" data-r="${r.id}" data-k="${f.k}" style="text-decoration:underline">${E(x.fname)}</a>`).join(', ')}`}
         · ${fmt(d.at)} ע"י ${E(d.byName || '')}${d.note ? ` · ${E(d.note)}` : ''}${d.mail ? ` · <i class="fa-solid fa-envelope"></i> נשלח לאימייל ${E(d.mail.to)} (${fmt(d.mail.at)})` : ''}<br>
         ${d.conf ? `<b><i class="fa-solid fa-lock"></i> המשתמש אישר הורדה ב-${fmt(d.conf)} – הגישה שלו לקובץ / לקישור נחסמה</b>` : `<b><i class="fa-solid fa-hourglass-half"></i> ממתין לאישור הורדה מהמשתמש</b> <button type="button" class="lgp-btn o s" data-a="undlv" data-r="${r.id}" data-k="${f.k}">ביטול המסירה</button>`}</div>`
@@ -30029,7 +30029,7 @@ function fileRow(r, f, num) {
       <div class="ac"><button type="button" class="lgp-btn r s" data-a="rejgo" data-r="${r.id}" data-k="${f.k}">שליחת דחייה</button><button type="button" class="lgp-btn o s" data-a="cancel">ביטול</button></div></div>` : ''}
     ${fm === 'dlv' ? `<div class="lgd-fm"><b>מסירה למשתמש – לאחר שהקובץ שויך במערכת למקום המתאים${num ? ` (ממתין למסירה #${num})` : ''}</b>
       <div class="rw"><label><input type="radio" name="lgdK" value="link" checked> קישור לצפייה בלבד</label><label><input type="radio" name="lgdK" value="file"> צירוף קובץ / קבצים</label></div>
-      <input type="url" id="lgdUrl" placeholder="https://...">
+      <input type="text" id="lgdUrl" dir="ltr" autocomplete="off" placeholder="הדבק קישור – גם קישור של קובץ שנפתח מהמערכת (blob:...)">
       <input type="file" id="lgdFile" multiple hidden>
       <input type="text" id="lgdDNote" maxlength="300" placeholder="הערה למשתמש (לא חובה)">
       <div class="rw"><label><input type="checkbox" id="lgdMailOn" ${ue ? 'checked' : ''}> לשלוח גם לאימייל של המשתמש</label></div>
@@ -30112,7 +30112,7 @@ function mailDlg(uid) {
   LD().reqs.filter(r => r.uid === uid).forEach(r => r.files.forEach(f => {
     if (f.st === 'ok') items.push({ t: 'up', r, f, x: { fid: f.fid, fname: f.name, fsize: f.size } });
     if (f.deliv && f.deliv.kind === 'file') dFiles(f.deliv).forEach(x => items.push({ t: 'dl', r, f, x }));
-    if (f.deliv && f.deliv.kind === 'link') items.push({ t: 'ln', r, f, x: { url: f.deliv.url, fname: 'קישור לצפייה – ' + f.name } });
+    if (f.deliv && f.deliv.kind === 'link') items.push(f.deliv.fid ? { t: 'dl', r, f, x: { fid: f.deliv.fid, fname: f.deliv.fname || 'קובץ', fsize: f.deliv.fsize } } : { t: 'ln', r, f, x: { url: f.deliv.url, fname: 'קישור לצפייה – ' + f.name } });
   }));
   const o = dlg('lgdMail', 'sm', 'fa-envelope', 'שליחה לאימייל – ' + E(e.name || ''), 'בחרו קבצים לשליחה, או צרפו קבצים חדשים',
     `<div class="lgd-fm" style="background:#fff;border:0;padding:0">
@@ -30145,6 +30145,34 @@ function mailDlg(uid) {
   };
 }
 
+/* ---------- קישור לצפייה: גם קישור זמני של קובץ שנפתח במערכת (blob:) ----------
+   קישור blob: קיים רק בדפדפן שפתח את הקובץ – לכן הוא מומר לקובץ מהמערכת שנפתח למשתמש לצפייה בלבד */
+const blobMap = new Map(); let lastOpen = null;
+try {
+  const _co = URL.createObjectURL.bind(URL);
+  URL.createObjectURL = function (o) { const u = _co(o); try { const fid = lastOpen && Date.now() - lastOpen.t < 20000 ? lastOpen.id : ''; if (fid) lastOpen = null; blobMap.set(u, { blob: o, fid }); if (blobMap.size > 300) blobMap.delete(blobMap.keys().next().value); } catch (e) { } return u; };
+} catch (e) { }
+const _of = window.openFile;
+if (typeof _of === 'function') window.openFile = function (id) { lastOpen = { id, t: Date.now() }; return _of.apply(this, arguments); };
+async function linkFrom(raw) {
+  let url = String(raw || '').trim().replace(/^["'<\s]+|["'>\s]+$/g, '');
+  if (!url) throw new Error('יש להדביק קישור');
+  if (/^blob:/i.test(url) || /^data:/i.test(url)) {
+    const m = blobMap.get(url);
+    if (m && m.fid) { const r0 = await rec(m.fid); return { kind: 'link', url: '', fid: m.fid, fname: (r0 && r0.name) || 'קובץ', fsize: (r0 && r0.size) || 0 }; }
+    let bl = m && m.blob instanceof Blob ? m.blob : null;
+    if (!bl) { try { bl = await (await fetch(url)).blob(); } catch (e) { } }
+    if (!bl) throw new Error('הקישור שהודבק הוא קישור זמני (blob) של קובץ שנפתח בדפדפן, והוא כבר לא זמין.\nפתח את הקובץ שוב מהמערכת, העתק את הקישור והדבק מיד – או בחר "צירוף קובץ / קבצים".');
+    const ext = { 'application/pdf': '.pdf', 'application/msword': '.doc', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx', 'image/jpeg': '.jpg', 'image/png': '.png' }[bl.type] || '';
+    const nm = 'מסמך מאושר' + ext, m2 = await store(new File([bl], nm, { type: bl.type || 'application/octet-stream' }));
+    if (!m2) throw new Error('שמירת הקובץ נכשלה');
+    return { kind: 'link', url: '', fid: m2.id, fname: nm, fsize: bl.size };
+  }
+  if (/^www\./i.test(url)) url = 'https://' + url;
+  if (!/^https?:\/\/\S+$/i.test(url)) throw new Error('יש להדביק קישור תקין (https://...) או קישור של קובץ שנפתח מהמערכת');
+  return { kind: 'link', url };
+}
+
 async function onCenterClick(e) {
   const b = e.target.closest('[data-a]'); if (!b) return;
   if (b.tagName === 'INPUT') return;
@@ -30156,6 +30184,7 @@ async function onCenterClick(e) {
   if (a === 'tab') { cTab = b.dataset.t; form = null; return renderCenter(); }
   if (a === 'cancel') { form = null; return renderCenter(); }
   if (a === 'view') { if (f) { fileOpen(f.fid); if (r && !r.seenR.includes(W.id)) { r.seenR.push(W.id); save(); } } return; }
+  if (a === 'lview') { if (f && f.deliv && f.deliv.fid) fileOpen(f.deliv.fid); return; }
   if (a === 'dview') { const x = f && dFiles(f.deliv)[+b.dataset.i || 0]; if (x) fileOpen(x.fid); return; }
   if (!r) return;
   if (a === 'ok') {
@@ -30181,9 +30210,9 @@ async function onCenterClick(e) {
     let d;
     const lbl = b.innerHTML, busyB = t => { b.disabled = true; b.innerHTML = t; }, freeB = () => { b.disabled = false; b.innerHTML = lbl; };
     if (kind === 'link') {
-      const url = ($('lgdUrl').value || '').trim();
-      if (!/^https?:\/\/\S+$/i.test(url)) return alert('יש להזין קישור תקין שמתחיל ב-https://');
-      d = { kind: 'link', url };
+      busyB('⏳ בודק קישור...');
+      try { d = await linkFrom(($('lgdUrl').value || '').trim()); }
+      catch (er) { freeB(); return alert(er.message || String(er)); }
     } else {
       const fls = [...($('lgdFile').files || [])]; if (!fls.length) { $('lgdFile').hidden = false; return alert('יש לבחור קובץ לצירוף'); }
       const out = [];
@@ -30194,7 +30223,7 @@ async function onCenterClick(e) {
     if (mOn) {
       busyB('⏳ שולח אימייל...');
       try {
-        await mailSend(to, `מסמך מאושר – ${r.subj}`, `שלום ${r.uname || ''},\nהקובץ "${f.name}" נבדק ונמצא תקין והועבר להמשך טיפול.${nt ? '\n' + nt : ''}`, dFiles(d), d.kind === 'link' ? [{ label: 'קישור לצפייה', url: d.url }] : []);
+        await mailSend(to, `מסמך מאושר – ${r.subj}`, `שלום ${r.uname || ''},\nהקובץ "${f.name}" נבדק ונמצא תקין והועבר להמשך טיפול.${nt ? '\n' + nt : ''}`, d.kind === 'link' && d.fid ? [{ fid: d.fid, fname: d.fname, fsize: d.fsize }] : dFiles(d), d.kind === 'link' && !d.fid ? [{ label: 'קישור לצפייה', url: d.url }] : []);
         mailed = { to, at: nowIso() };
         const ee = emp(r.uid); if (ee && ee.email !== to) ee.email = to;
       } catch (er) { mailErr(er); if (!confirm('האימייל לא נשלח. למסור למשתמש במערכת בכל זאת?')) { freeB(); return; } }
