@@ -29629,5 +29629,553 @@ new MutationObserver(function(ms){for(var m of ms){var n=m.target;if(n.nodeName=
 var R=document.documentElement;R.setAttribute('data-ds-motion','off');new MutationObserver(function(){if(R.getAttribute('data-ds-motion')!=='off')R.setAttribute('data-ds-motion','off');}).observe(R,{attributes:true,attributeFilter:['data-ds-motion']});
 })();
 </script>
+
+<!-- ========== PDF קומפקטי: כספים וחוזים + סטטוס הזמנות ==========
+     בלי שורת לוגו, בלי שם המערכת ו"מערכת ניהול ובקרה חשבות", בלי שורת "דוח זה הופק..." בתחתית;
+     מפיק הדוח ותאריך ההפקה עוברים לצד שמאל של שורת הכותרת – כך נכנס יותר מהטבלה בכל עמוד -->
+<script id="pdfCompactJs">
+(function () {
+const TABS = ['contracts', 'bills', 'guarantees', 'reports', 'order-status'];
+const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const activeTab = () => { const v = [...document.querySelectorAll('section.view-content')].find(s => !s.classList.contains('hidden')); return v ? v.id.replace(/^view-/, '') : ''; };
+window.pdfCompactTabs = TABS;
+function compact(el) {
+  if (!el || el.__pdfc) return;
+  const kids = [...el.children];
+  const hdr = kids.find(d => d.tagName === 'DIV' && /border-bottom:\s*2px\s+solid\s+#6366f1/i.test(d.getAttribute('style') || ''));
+  if (!hdr) return;
+  const meta = [...hdr.querySelectorAll('p')].map(p => p.textContent.replace(/\s+/g, ' ').trim()).filter(t => /מפיק הדוח|תאריך הפקה/.test(t));
+  meta.sort((a, b) => (/מפיק/.test(a) ? 0 : 1) - (/מפיק/.test(b) ? 0 : 1));   /* מפיק הדוח ואחריו תאריך ההפקה */
+  hdr.remove();
+  [...el.children].forEach(d => { if (d.tagName === 'DIV' && d.textContent.length < 250 && /דוח זה הופק באופן אוטומטי/.test(d.textContent)) d.remove(); });
+  const metaHtml = `<div style="text-align:left;font-size:9.5px;color:#64748b;white-space:nowrap;line-height:1.45;flex:none">${meta.map(t => `<div>${E(t)}</div>`).join('')}</div>`;
+  const h2 = [...el.children].find(x => x.tagName === 'H2');
+  if (h2) {
+    const sub = h2.nextElementSibling && h2.nextElementSibling.tagName === 'P' ? h2.nextElementSibling : null;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:0 0 4px;padding-bottom:4px;border-bottom:1.5px solid #6366f1';
+    h2.parentNode.insertBefore(row, h2);
+    const right = document.createElement('div'); right.style.cssText = 'min-width:0'; row.appendChild(right);
+    right.appendChild(h2); h2.style.margin = '0'; h2.style.fontSize = '15px'; h2.style.lineHeight = '1.3';
+    if (sub) { right.appendChild(sub); sub.style.margin = '0'; sub.style.fontSize = '10.5px'; }
+    row.insertAdjacentHTML('beforeend', metaHtml);
+  } else el.insertAdjacentHTML('afterbegin', `<div style="display:flex;justify-content:flex-end;margin-bottom:4px">${metaHtml}</div>`);
+  const t = el.querySelector('table'); if (t && /margin-top/.test(t.getAttribute('style') || '')) t.style.marginTop = '6px';
+  el.style.padding = '6px'; el.__pdfc = 1;
+}
+const prev = window.pdfRender;
+if (typeof prev === 'function') window.pdfRender = function (el, o) {
+  try { if (TABS.includes(activeTab())) compact(el); } catch (e) { console.warn('pdfCompact', e); }
+  return prev.apply(this, arguments);
+};
+})();
+</script>
+
+<!-- ========== העלאת מסמכים ממסך הכניסה (משתמשי העלאה בלבד) + בדיקה, דחייה/אישור ומסירת קובץ ========== -->
+<style id="lgdCss">
+#lgpPortal{position:fixed;inset:0;z-index:2147482500;background:linear-gradient(160deg,#0f172a,#1e1b4b);overflow-y:auto;direction:rtl;font-family:Assistant,Arial,sans-serif;color:#0f172a;padding:18px}
+#lgpPortal[hidden]{display:none}
+body.lgp-on{overflow:hidden}
+.lgp-w{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.lgp-h{display:flex;align-items:center;gap:12px;color:#fff;flex-wrap:wrap}
+.lgp-h img{height:44px;max-width:150px;object-fit:contain;background:#fff;border-radius:10px;padding:3px}
+.lgp-h .t{flex:1;min-width:0}.lgp-h .t b{font-size:20px;display:block}.lgp-h .t small{color:#c7d2fe;font-size:13px}
+.lgp-h button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;font-family:inherit}
+.lgp-h button:hover{background:#dc2626}
+.lgp-c{background:#fff;border-radius:16px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.25)}
+.lgp-c h3{font-size:17px;font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.lgp-c h3 i{color:#4f46e5}
+.lgp-c label.l{display:block;font-size:12.5px;font-weight:700;color:#475569;margin:8px 0 4px}
+.lgp-c input[type=text],.lgp-c input[type=url],.lgp-c textarea{width:100%;padding:9px 10px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box}
+.lgp-drop{border:2px dashed #a5b4fc;border-radius:14px;padding:18px;text-align:center;background:#eef2ff;cursor:pointer;color:#3730a3;font-weight:700;margin-top:10px}
+.lgp-drop.ov{background:#e0e7ff;border-color:#4f46e5}
+.lgp-drop small{display:block;font-weight:500;color:#64748b;margin-top:4px}
+.lgp-sel{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.lgp-sel div{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:6px 10px;font-size:13px}
+.lgp-sel div span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lgp-sel button{border:0;background:none;color:#dc2626;cursor:pointer}
+.lgp-btn{background:#4f46e5;color:#fff;border:0;border-radius:10px;padding:10px 18px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:7px}
+.lgp-btn:disabled{opacity:.5;cursor:not-allowed}.lgp-btn.g{background:#059669}.lgp-btn.r{background:#dc2626}.lgp-btn.o{background:#fff;color:#334155;border:1px solid #cbd5e1}
+.lgp-btn.s{padding:6px 11px;font-size:12.5px;border-radius:8px}
+.lgp-msg{font-size:13px;margin-top:8px;min-height:18px;font-weight:700}
+.lgp-rq{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-top:10px;background:#fcfcff}
+.lgp-rq .hd{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:#475569;margin-bottom:6px}
+.lgp-rq .hd b{color:#0f172a;font-size:14.5px}
+.lgp-f{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px dashed #e2e8f0;padding:8px 0}
+.lgp-f:first-of-type{border-top:0}
+.lgp-f .nm{flex:1 1 220px;min-width:0;font-weight:700;font-size:13.5px;overflow-wrap:anywhere}
+.lgp-f .nm small{display:block;font-weight:500;color:#64748b;font-size:11.5px}
+.lgd-st{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.lgd-st.p{background:#fef3c7;color:#92400e}.lgd-st.k{background:#d1fae5;color:#065f46}.lgd-st.x{background:#fee2e2;color:#991b1b}.lgd-st.d{background:#e0e7ff;color:#3730a3}
+.lgp-why{flex-basis:100%;font-size:12.5px;border-radius:10px;padding:7px 10px}
+.lgp-why.x{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}.lgp-why.k{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+.lgp-due{background:#fffbeb;border:2px solid #f59e0b;border-radius:16px;padding:14px;box-shadow:0 14px 40px rgba(0,0,0,.25)}
+.lgp-due h3{margin:0 0 8px;font-size:16px;font-weight:900;color:#92400e;display:flex;gap:8px;align-items:center}
+.lgp-dv{background:#fff;border:1px solid #fcd34d;border-radius:12px;padding:10px;margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lgp-dv .nm{flex:1 1 220px;font-weight:700;font-size:13.5px}
+.lgp-dv .nm small{display:block;color:#64748b;font-weight:500}
+.lgp-dv label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;flex-basis:100%}
+.lgp-dv label.dis{opacity:.45}
+.lgp-empty{color:#94a3b8;text-align:center;padding:14px;font-size:13px}
+/* חלונות */
+.lgd-ov{position:fixed;inset:0;z-index:2147482600;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;direction:rtl;font-family:Assistant,Arial,sans-serif}
+.lgd-dl{margin:auto 0;width:100%;max-width:980px;background:#fff;color:#0f172a;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:calc(100dvh - 32px);overflow:hidden}
+.lgd-dl.sm{max-width:560px}
+.lgd-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.lgd-hd>i{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#4f46e5;color:#fff;font-size:17px;flex:none}
+.lgd-hd .t{flex:1;font-size:18px;font-weight:900}.lgd-hd .t small{display:block;font-size:12px;font-weight:600;color:#64748b}
+.lgd-hd .x{border:0;background:transparent!important;font-size:20px;color:#64748b;cursor:pointer;width:36px;height:36px;border-radius:10px}
+.lgd-hd .x:hover{background:#fee2e2;color:#dc2626}
+.lgd-bd{padding:14px 18px;overflow-y:auto;overscroll-behavior:contain}
+.lgd-tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.lgd-tb button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:999px;padding:6px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.lgd-tb button.on{background:#4f46e5;color:#fff;border-color:#4f46e5}
+.lgd-tb input{flex:1 1 180px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:10px;font-size:13px;font-family:inherit}
+.lgd-fm{flex-basis:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.lgd-fm textarea,.lgd-fm input[type=url],.lgd-fm input[type=text]{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:10px;font-size:13.5px;font-family:inherit;box-sizing:border-box}
+.lgd-fm .rw{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:13px;font-weight:700}
+.lgd-fm .ac{display:flex;gap:6px;flex-wrap:wrap}
+#lgdHdrBtn{position:relative}
+#lgdHdrBtn .bd{position:absolute;top:-6px;left:-6px;min-width:18px;height:18px;border-radius:999px;background:#dc2626;color:#fff;font-size:10.5px;font-weight:800;display:grid;place-items:center;padding:0 4px}
+#lgdHdrBtn .bd[hidden]{display:none}
+/* לוח בקרה */
+#lgpPortal input,#lgpPortal textarea,.lgd-ov input,.lgd-ov textarea{background:#fff!important;color:#0f172a!important}
+#lgdAdmin table{width:100%;border-collapse:collapse;font-size:13px}
+#lgdAdmin th,#lgdAdmin td{padding:7px 8px;border-bottom:1px solid #e5e7eb;text-align:right}
+#lgdAdmin th{background:#f8fafc;font-size:12px;color:#475569}
+#lgdAdmin td.c,#lgdAdmin th.c{text-align:center}
+#lgdAdmin input[type=checkbox]{width:18px;height:18px;cursor:pointer}
+</style>
+
+<script id="lgdJs">
+(function () {
+const $ = id => document.getElementById(id);
+const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const arr = v => Array.isArray(v) ? v.filter(x => x != null) : (v && typeof v === 'object' ? Object.values(v).filter(x => x != null) : []);
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const nowIso = () => new Date().toISOString();
+const fmt = iso => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); };
+const size = n => { n = +n || 0; return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; };
+const OK_EXT = /\.(pdf|docx?)$/i;
+const note = m => { try { showNotification(m); } catch (e) { } };
+const log = m => { try { addLog(m); } catch (e) { } };
+const save = () => { try { window.saveData(); } catch (e) { } try { if (window.saveDataNow) window.saveDataNow(); } catch (e) { } };
+
+/* ---------- נתונים ---------- */
+function LD() {
+  if (!appData.loginDocs || typeof appData.loginDocs !== 'object') appData.loginDocs = {};
+  const d = appData.loginDocs;
+  d.up = arr(d.up); d.rv = arr(d.rv); d.reqs = arr(d.reqs);
+  d.reqs.forEach(r => { r.files = arr(r.files); r.seenR = arr(r.seenR); });
+  return d;
+}
+const ME = () => { try { return me(); } catch (e) { return null; } };
+const isAdm = u => !!u && u.role === 'admin';
+const isUp = u => !!u && !isAdm(u) && u.id !== 'guest' && LD().up.includes(u.id);
+const isRv = u => !!u && u.id !== 'guest' && !isUp(u) && (isAdm(u) || LD().rv.includes(u.id));
+const empName = id => { const e = (appData.employees || []).find(x => x.id === id); return e ? e.name : ''; };
+const findF = (rid, k) => { const r = LD().reqs.find(x => x.id === rid); return { r, f: r && r.files.find(x => x.k === k) }; };
+const stTxt = f => f.st === 'ok' ? '<span class="lgd-st k"><i class="fa-solid fa-circle-check"></i> תקין – הועבר להמשך טיפול</span>'
+  : f.st === 'rej' ? '<span class="lgd-st x"><i class="fa-solid fa-circle-xmark"></i> נדחה</span>'
+  : '<span class="lgd-st p"><i class="fa-solid fa-hourglass-half"></i> ממתין לבדיקה</span>';
+const fileOpen = fid => { try { (window.openFile || openFile)(fid); } catch (e) { alert('לא ניתן לפתוח את הקובץ'); } };
+const store = async f => { const sf = window.storeFile || (typeof storeFile === 'function' ? storeFile : null); return sf ? await sf(f) : null; };
+
+/* ממתינים לחיבור לענן לפני העלאה – אחרת הבקשה נשמרת רק בדפדפן של המשתמש */
+async function cloudOk(ms) {
+  let conf = false; try { conf = !!(getFirebaseConfig().dbUrl) && !localStorage.getItem(FB_DISABLED_KEY); } catch (e) { }
+  if (!conf) return true;
+  const t0 = Date.now();
+  for (;;) {
+    try { if (isFirebaseConnected && firebaseDb && cloudInitialLoaded) return true; } catch (e) { return true; }
+    if (Date.now() - t0 > ms) return false;
+    await new Promise(r => setTimeout(r, 300));
+  }
+}
+
+/* ======================================================================
+   1) מסך משתמש העלאה בלבד
+   ====================================================================== */
+let sel = [], opened = new Set(), lastSig = '', busy = false;
+function portalHtml() {
+  const B = appData.branding || {}, u = ME() || {};
+  return `<div class="lgp-w">
+    <div class="lgp-h">${B.logo ? `<img src="${E(B.logo)}" alt="">` : ''}<div class="t"><b>העלאת מסמכים</b><small>שלום ${E(u.name || '')} · ${E(B.name || '')}</small></div>
+      <button type="button" data-a="out"><i class="fa-solid fa-right-from-bracket"></i> התנתקות</button></div>
+    <div id="lgpDue"></div>
+    <div class="lgp-c"><h3><i class="fa-solid fa-cloud-arrow-up"></i> העלאת מסמכים לבדיקה</h3>
+      <label class="l">נושא הבקשה *</label><input type="text" id="lgpSubj" maxlength="120" placeholder="למשל: מסמכים לחשבון / חוזה / הזמנה">
+      <label class="l">הערות (לא חובה)</label><textarea id="lgpNote" rows="2" maxlength="600"></textarea>
+      <div class="lgp-drop" id="lgpDrop"><i class="fa-solid fa-file-arrow-up" style="font-size:24px"></i><div>לחץ לבחירת קבצים או גרור לכאן</div><small>קבצי PDF או Word בלבד (pdf, doc, docx) · אפשר כמה קבצים יחד</small></div>
+      <input type="file" id="lgpFile" multiple accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+      <div class="lgp-sel" id="lgpSel"></div>
+      <div style="margin-top:12px"><button type="button" class="lgp-btn" data-a="send" id="lgpSend"><i class="fa-solid fa-paper-plane"></i> שליחת המסמכים</button></div>
+      <div class="lgp-msg" id="lgpMsg"></div></div>
+    <div class="lgp-c"><h3><i class="fa-solid fa-list-check"></i> הבקשות שלי</h3><div id="lgpList"></div></div>
+  </div>`;
+}
+function ensurePortal() {
+  let p = $('lgpPortal'); if (p) return p;
+  p = document.createElement('div'); p.id = 'lgpPortal'; p.hidden = true; document.body.appendChild(p);
+  p.addEventListener('click', onPortalClick);
+  p.addEventListener('change', e => {
+    if (e.target.id === 'lgpFile') { addSel([...e.target.files]); e.target.value = ''; }
+    if (e.target.dataset.cf) { const b = p.querySelector(`[data-a="conf"][data-r="${e.target.dataset.r}"][data-k="${e.target.dataset.k}"]`); if (b) b.disabled = !e.target.checked; }
+  });
+  p.addEventListener('dragover', e => { const d = e.target.closest('#lgpDrop'); if (d) { e.preventDefault(); d.classList.add('ov'); } });
+  p.addEventListener('dragleave', e => { const d = e.target.closest('#lgpDrop'); if (d) d.classList.remove('ov'); });
+  p.addEventListener('drop', e => { const d = e.target.closest('#lgpDrop'); if (!d) return; e.preventDefault(); d.classList.remove('ov'); addSel([...(e.dataTransfer.files || [])]); });
+  return p;
+}
+function addSel(files) {
+  const bad = files.filter(f => !OK_EXT.test(f.name));
+  files.filter(f => OK_EXT.test(f.name)).forEach(f => { if (!sel.some(x => x.name === f.name && x.size === f.size)) sel.push(f); });
+  renderSel();
+  if (bad.length) msg('⚠️ ניתן להעלות קבצי PDF או Word בלבד. לא נוספו: ' + bad.map(f => f.name).join(', '), true);
+}
+function renderSel() {
+  const el = $('lgpSel'); if (!el) return;
+  el.innerHTML = sel.map((f, i) => `<div><i class="fa-solid ${/\.pdf$/i.test(f.name) ? 'fa-file-pdf' : 'fa-file-word'}" style="color:${/\.pdf$/i.test(f.name) ? '#dc2626' : '#2563eb'}"></i><span>${E(f.name)}</span><small>${size(f.size)}</small><button type="button" data-a="rm" data-i="${i}" title="הסר"><i class="fa-solid fa-xmark"></i></button></div>`).join('');
+}
+const msg = (t, err) => { const m = $('lgpMsg'); if (m) { m.textContent = t; m.style.color = err ? '#dc2626' : '#059669'; } };
+const myReqs = () => { const u = ME(); return u ? LD().reqs.filter(r => r.uid === u.id).sort((a, b) => String(b.at).localeCompare(String(a.at))) : []; };
+
+function renderPortalLists() {
+  const reqs = myReqs();
+  /* מסמכים מאושרים שנשלחו למשתמש וטרם אושרה הורדתם – חובה לאשר */
+  const due = [];
+  reqs.forEach(r => r.files.forEach(f => { if (f.st === 'ok' && f.deliv && !f.deliv.conf) due.push({ r, f }); }));
+  const D = $('lgpDue');
+  if (D) D.innerHTML = due.length ? `<div class="lgp-due"><h3><i class="fa-solid fa-triangle-exclamation"></i> ממתין לך קובץ מאושר – חובה להוריד ולאשר את ההורדה</h3>
+    ${due.map(({ r, f }) => { const d = f.deliv, k = r.id + '|' + f.k, op = opened.has(k);
+      return `<div class="lgp-dv"><div class="nm">${d.kind === 'link' ? '<i class="fa-solid fa-link"></i> קישור לצפייה בלבד' : '<i class="fa-solid fa-paperclip"></i> ' + E(d.fname || 'קובץ')}
+        <small>בהמשך לקובץ "${E(f.name)}" · בקשה: ${E(r.subj)} · נשלח ${fmt(d.at)}${d.note ? ' · ' + E(d.note) : ''}</small></div>
+        <button type="button" class="lgp-btn s" data-a="get" data-r="${r.id}" data-k="${f.k}"><i class="fa-solid ${d.kind === 'link' ? 'fa-eye' : 'fa-download'}"></i> ${d.kind === 'link' ? 'צפייה' : 'פתיחה / הורדה'}</button>
+        <label class="${op ? '' : 'dis'}"><input type="checkbox" data-cf="1" data-r="${r.id}" data-k="${f.k}" ${op ? '' : 'disabled'}> אני מאשר/ת שביצעתי הורדה של הקובץ המאושר (לאחר האישור הגישה לקובץ / לקישור תיחסם)</label>
+        <button type="button" class="lgp-btn g s" data-a="conf" data-r="${r.id}" data-k="${f.k}" disabled><i class="fa-solid fa-check"></i> אישור הורדה</button></div>`; }).join('')}</div>` : '';
+  const L = $('lgpList'); if (!L) return;
+  L.innerHTML = reqs.length ? reqs.map(r => `<div class="lgp-rq"><div class="hd"><b>${E(r.subj)}</b><span>· נשלח ${fmt(r.at)}</span><span>· ${r.files.length} קבצים</span></div>
+    ${r.note ? `<div style="font-size:12.5px;color:#475569;margin-bottom:6px">${E(r.note)}</div>` : ''}
+    ${r.files.map(f => `<div class="lgp-f"><div class="nm"><i class="fa-solid ${/\.pdf$/i.test(f.name) ? 'fa-file-pdf' : 'fa-file-word'}"></i> ${E(f.name)}<small>${size(f.size)}${f.fixOf ? ' · קובץ מתוקן' : ''}</small></div>${stTxt(f)}
+      ${f.st === 'rej' ? `<div class="lgp-why x"><b>סיבת הדחייה:</b> ${E(f.why || '-')} <small>(${fmt(f.rAt)})</small>
+        <div style="margin-top:6px"><button type="button" class="lgp-btn o s" data-a="fix" data-r="${r.id}" data-k="${f.k}"><i class="fa-solid fa-rotate"></i> העלאת קובץ מתוקן</button></div></div>` : ''}
+      ${f.st === 'ok' ? `<div class="lgp-why k">הקובץ נבדק, נמצא תקין והועבר להמשך טיפול <small>(${fmt(f.rAt)})</small>${f.deliv && f.deliv.conf ? `<br><i class="fa-solid fa-lock"></i> הקובץ המאושר הורד ואושר ב-${fmt(f.deliv.conf)} – הגישה אליו נחסמה` : f.deliv ? '<br><b>ממתין לך קובץ מאושר – ראה למעלה</b>' : ''}</div>` : ''}</div>`).join('')}</div>`).join('')
+    : '<div class="lgp-empty">עדיין לא נשלחו מסמכים</div>';
+}
+function showPortal() {
+  const p = ensurePortal();
+  if (!p.hidden) return;
+  p.innerHTML = portalHtml(); sel = []; p.hidden = false; document.body.classList.add('lgp-on');
+  renderPortalLists(); lastSig = sigUp(); popUploader();
+}
+function hidePortal() { const p = $('lgpPortal'); if (p && !p.hidden) { p.hidden = true; p.innerHTML = ''; } document.body.classList.remove('lgp-on'); }
+const sigUp = () => JSON.stringify(myReqs());
+
+async function onPortalClick(e) {
+  const b = e.target.closest('[data-a]'); if (!b) { if (e.target.closest('#lgpDrop')) $('lgpFile').click(); return; }
+  const a = b.dataset.a;
+  if (a === 'out') { hidePortal(); try { (window.logout || logout)(); } catch (er) { } return; }
+  if (a === 'rm') { sel.splice(+b.dataset.i, 1); return renderSel(); }
+  if (a === 'send') return send();
+  if (a === 'get') {
+    const { f } = findF(b.dataset.r, b.dataset.k); if (!f || !f.deliv || f.deliv.conf) return renderPortalLists();
+    if (f.deliv.kind === 'link') window.open(f.deliv.url, '_blank', 'noopener'); else fileOpen(f.deliv.fid);
+    opened.add(b.dataset.r + '|' + b.dataset.k); renderPortalLists(); return;
+  }
+  if (a === 'conf') {
+    const cb = $('lgpPortal').querySelector(`[data-cf][data-r="${b.dataset.r}"][data-k="${b.dataset.k}"]`);
+    if (!cb || !cb.checked) return alert('יש לסמן שביצעת הורדה של הקובץ');
+    const { r, f } = findF(b.dataset.r, b.dataset.k); if (!f || !f.deliv) return;
+    f.deliv.conf = nowIso(); f.deliv.seenBy = false;
+    log(`העלאת מסמכים: ${empName(r.uid)} אישר/ה הורדה של הקובץ המאושר (${f.deliv.kind === 'link' ? 'קישור' : f.deliv.fname}) – הגישה נחסמה`);
+    save(); renderPortalLists(); lastSig = sigUp(); return;
+  }
+  if (a === 'fix') {
+    const i = document.createElement('input'); i.type = 'file'; i.accept = '.pdf,.doc,.docx';
+    i.onchange = async () => {
+      const fl = i.files[0]; if (!fl) return; if (!OK_EXT.test(fl.name)) return alert('ניתן להעלות קבצי PDF או Word בלבד');
+      if (!(await cloudOk(15000))) return alert('אין חיבור לשרת כרגע. נסה שוב בעוד רגע.');
+      const m = await store(fl); if (!m) return;
+      const { r, f } = findF(b.dataset.r, b.dataset.k); if (!r) return;
+      r.files.push({ k: uid('k'), fid: m.id, name: fl.name, size: fl.size, type: fl.type || '', st: 'p', fixOf: f ? f.k : '' });
+      r.seenR = []; r.upd = nowIso();
+      log(`העלאת מסמכים: ${empName(r.uid)} העלה/תה קובץ מתוקן "${fl.name}" לבקשה "${r.subj}"`);
+      save(); renderPortalLists(); lastSig = sigUp();
+    };
+    i.click();
+  }
+}
+async function send() {
+  if (busy) return;
+  const u = ME(); if (!u) return;
+  const subj = ($('lgpSubj').value || '').trim(), nt = ($('lgpNote').value || '').trim();
+  if (!subj) return msg('יש למלא נושא לבקשה', true);
+  if (!sel.length) return msg('יש לבחור לפחות קובץ אחד (PDF או Word)', true);
+  busy = true; const btn = $('lgpSend'); btn.disabled = true;
+  try {
+    msg('⏳ מתחבר לשרת...');
+    if (!(await cloudOk(20000))) { msg('⚠️ אין חיבור לשרת כרגע – המסמכים לא נשלחו. נסה שוב בעוד רגע.', true); return; }
+    const files = [];
+    for (let i = 0; i < sel.length; i++) {
+      const f = sel[i]; msg(`⏳ מעלה ${i + 1} מתוך ${sel.length}: ${f.name}`);
+      const m = await store(f);
+      if (!m) { msg(`⚠️ העלאת "${f.name}" נכשלה. אף בקשה לא נשלחה – נסה שוב.`, true); return; }
+      files.push({ k: uid('k'), fid: m.id, name: f.name, size: f.size, type: f.type || '', st: 'p' });
+    }
+    LD().reqs.push({ id: uid('lr'), uid: u.id, uname: u.name, subj, note: nt, at: nowIso(), files, seenR: [] });
+    log(`העלאת מסמכים ממסך הכניסה: ${u.name} שלח/ה ${files.length} קבצים – "${subj}"`);
+    save();
+    sel = []; renderSel(); $('lgpSubj').value = ''; $('lgpNote').value = '';
+    msg('✅ המסמכים נשלחו לבדיקה. תקבל/י כאן הודעה על כל קובץ.');
+    renderPortalLists(); lastSig = sigUp();
+  } catch (er) { console.error(er); msg('⚠️ שגיאה בשליחה: ' + (er.message || er), true); }
+  finally { busy = false; btn.disabled = false; }
+}
+/* הודעה קופצת למשתמש על תגובות חדשות */
+function popUploader() {
+  const items = [];
+  myReqs().forEach(r => r.files.forEach(f => { if ((f.st === 'ok' || f.st === 'rej') && !f.seenU) items.push({ r, f }); }));
+  if (!items.length) return;
+  dlg('lgdUpPop', 'sm', 'fa-bell', 'התקבלו תגובות על המסמכים שלך', `${items.length} עדכונים`,
+    items.map(({ r, f }) => `<div class="lgp-f" style="border-top:1px dashed #e2e8f0"><div class="nm">${E(f.name)}<small>בקשה: ${E(r.subj)}</small></div>${stTxt(f)}
+      ${f.st === 'rej' ? `<div class="lgp-why x"><b>סיבה:</b> ${E(f.why || '-')}</div>` : `<div class="lgp-why k">הקובץ תקין והועבר להמשך טיפול${f.deliv && !f.deliv.conf ? ' · נשלח אליך קובץ מאושר להורדה' : ''}</div>`}</div>`).join('')
+    + `<div style="margin-top:12px"><button type="button" class="lgp-btn" data-close="1">הבנתי</button></div>`,
+    () => { items.forEach(({ f }) => { f.seenU = true; }); save(); lastSig = sigUp(); });
+}
+
+/* ======================================================================
+   2) מרכז בדיקת מסמכים (מנהל מערכת + מי שהוגדר בלוח הבקרה)
+   ====================================================================== */
+let cTab = 'p', cQ = '', form = null;   /* form = {r, k, t:'rej'|'dlv'} */
+function dlg(id, cls, ic, title, sub, body, onClose) {
+  document.getElementById(id)?.remove();
+  const o = document.createElement('div'); o.id = id; o.className = 'lgd-ov';
+  o.innerHTML = `<div class="lgd-dl ${cls || ''}" role="dialog" aria-modal="true"><div class="lgd-hd"><i class="fa-solid ${ic}"></i><div class="t">${title}<small>${sub || ''}</small></div><button type="button" class="x" data-close="1" title="סגירה"><i class="fa-solid fa-xmark"></i></button></div><div class="lgd-bd">${body}</div></div>`;
+  document.body.appendChild(o);
+  const close = () => { o.remove(); if (onClose) try { onClose(); } catch (e) { } };
+  o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-close]')) close(); });
+  return o;
+}
+const pendCount = () => LD().reqs.reduce((n, r) => n + r.files.filter(f => f.st === 'p').length, 0);
+function centerBody() {
+  const all = LD().reqs.slice().sort((a, b) => String(b.upd || b.at).localeCompare(String(a.upd || a.at)));
+  const cnt = t => all.reduce((n, r) => n + r.files.filter(f => t === 'all' || f.st === t || (t === 'dl' && f.deliv && !f.deliv.conf)).length, 0);
+  const q = cQ.trim().toLowerCase();
+  const rows = all.map(r => ({ r, fs: r.files.filter(f => cTab === 'all' || f.st === cTab || (cTab === 'dl' && f.deliv && !f.deliv.conf)) }))
+    .filter(x => x.fs.length && (!q || [x.r.uname, x.r.subj, x.r.note, ...x.r.files.map(f => f.name)].join(' ').toLowerCase().includes(q)));
+  const T = [['p', 'ממתינים לבדיקה'], ['ok', 'תקינים'], ['rej', 'נדחו'], ['dl', 'ממתינים לאישור הורדה'], ['all', 'הכל']];
+  return `<div class="lgd-tb">${T.map(([k, n]) => `<button type="button" data-a="tab" data-t="${k}" class="${cTab === k ? 'on' : ''}">${n} (${cnt(k)})</button>`).join('')}
+      <input type="search" id="lgdQ" placeholder="חיפוש לפי שם משתמש, נושא או קובץ" value="${E(cQ)}"></div>
+    ${rows.length ? rows.map(({ r, fs }) => `<div class="lgp-rq"><div class="hd"><b>${E(r.subj)}</b><span>· <i class="fa-solid fa-user"></i> ${E(r.uname || empName(r.uid))}</span><span>· ${fmt(r.at)}</span>
+        ${isAdm(ME()) ? `<button type="button" class="lgp-btn o s" style="margin-inline-start:auto" data-a="delreq" data-r="${r.id}" title="מחיקת הבקשה"><i class="fa-solid fa-trash"></i></button>` : ''}</div>
+      ${r.note ? `<div style="font-size:12.5px;color:#475569;margin-bottom:6px"><b>הערות המשתמש:</b> ${E(r.note)}</div>` : ''}
+      ${fs.map(f => fileRow(r, f)).join('')}</div>`).join('') : '<div class="lgp-empty">אין מסמכים להצגה</div>'}`;
+}
+function fileRow(r, f) {
+  const fm = form && form.r === r.id && form.k === f.k ? form.t : '';
+  const d = f.deliv;
+  return `<div class="lgp-f"><div class="nm"><i class="fa-solid ${/\.pdf$/i.test(f.name) ? 'fa-file-pdf' : 'fa-file-word'}" style="color:${/\.pdf$/i.test(f.name) ? '#dc2626' : '#2563eb'}"></i> ${E(f.name)}<small>${size(f.size)}${f.fixOf ? ' · קובץ מתוקן' : ''}${f.rAt ? ` · טופל ע"י ${E(f.rBy || '')} ב-${fmt(f.rAt)}` : ''}</small></div>
+    <button type="button" class="lgp-btn o s" data-a="view" data-r="${r.id}" data-k="${f.k}"><i class="fa-solid fa-eye"></i> צפייה</button>${stTxt(f)}
+    ${f.st === 'p' ? `<button type="button" class="lgp-btn g s" data-a="ok" data-r="${r.id}" data-k="${f.k}"><i class="fa-solid fa-check"></i> תקין</button>
+      <button type="button" class="lgp-btn r s" data-a="rejf" data-r="${r.id}" data-k="${f.k}"><i class="fa-solid fa-ban"></i> דחייה</button>`
+      : (!d ? `<button type="button" class="lgp-btn o s" data-a="undo" data-r="${r.id}" data-k="${f.k}" title="החזרה לממתין"><i class="fa-solid fa-rotate-left"></i></button>` : '')}
+    ${f.st === 'rej' ? `<div class="lgp-why x"><b>סיבת הדחייה:</b> ${E(f.why || '-')}</div>` : ''}
+    ${f.st === 'ok' ? (d ? `<div class="lgp-why ${d.conf ? 'k' : ''}" style="${d.conf ? '' : 'background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3'}">
+        ${d.kind === 'link' ? `<i class="fa-solid fa-link"></i> נשלח קישור לצפייה בלבד: <a href="${E(d.url)}" target="_blank" rel="noopener" style="text-decoration:underline">${E(d.url.length > 60 ? d.url.slice(0, 60) + '…' : d.url)}</a>` : `<i class="fa-solid fa-paperclip"></i> צורף קובץ: <a href="#" data-a="dview" data-r="${r.id}" data-k="${f.k}" style="text-decoration:underline">${E(d.fname)}</a>`}
+        · ${fmt(d.at)} ע"י ${E(d.byName || '')}${d.note ? ` · ${E(d.note)}` : ''}<br>
+        ${d.conf ? `<b><i class="fa-solid fa-lock"></i> המשתמש אישר הורדה ב-${fmt(d.conf)} – הגישה שלו לקובץ / לקישור נחסמה</b>` : `<b><i class="fa-solid fa-hourglass-half"></i> ממתין לאישור הורדה מהמשתמש</b> <button type="button" class="lgp-btn o s" data-a="undlv" data-r="${r.id}" data-k="${f.k}">ביטול המסירה</button>`}</div>`
+      : `<button type="button" class="lgp-btn s" data-a="dlvf" data-r="${r.id}" data-k="${f.k}"><i class="fa-solid fa-share-from-square"></i> מסירת קובץ / קישור למשתמש</button>`) : ''}
+    ${fm === 'rej' ? `<div class="lgd-fm"><b>סיבת הדחייה (תישלח למשתמש) *</b><textarea id="lgdWhy" rows="2" maxlength="600"></textarea>
+      <div class="ac"><button type="button" class="lgp-btn r s" data-a="rejgo" data-r="${r.id}" data-k="${f.k}">שליחת דחייה</button><button type="button" class="lgp-btn o s" data-a="cancel">ביטול</button></div></div>` : ''}
+    ${fm === 'dlv' ? `<div class="lgd-fm"><b>מסירה למשתמש – לאחר שהקובץ שויך במערכת למקום המתאים</b>
+      <div class="rw"><label><input type="radio" name="lgdK" value="link" checked> קישור לצפייה בלבד</label><label><input type="radio" name="lgdK" value="file"> צירוף קובץ</label></div>
+      <input type="url" id="lgdUrl" placeholder="https://...">
+      <input type="file" id="lgdFile" hidden>
+      <input type="text" id="lgdDNote" maxlength="300" placeholder="הערה למשתמש (לא חובה)">
+      <small style="color:#64748b">המשתמש יחויב לאשר שביצע הורדה, ומיד לאחר האישור הגישה שלו לקובץ / לקישור תיחסם.</small>
+      <div class="ac"><button type="button" class="lgp-btn g s" data-a="dlvgo" data-r="${r.id}" data-k="${f.k}"><i class="fa-solid fa-paper-plane"></i> שליחה למשתמש</button><button type="button" class="lgp-btn o s" data-a="cancel">ביטול</button></div></div>` : ''}
+  </div>`;
+}
+let cSig = '';
+function renderCenter(force) {
+  const o = $('lgdCenter'); if (!o) return;
+  const s = JSON.stringify(LD().reqs) + cTab + cQ + JSON.stringify(form);
+  if (!force && s === cSig) return; cSig = s;
+  const bd = o.querySelector('.lgd-bd'), st = bd.scrollTop, qf = document.activeElement && document.activeElement.id === 'lgdQ';
+  bd.innerHTML = centerBody(); bd.scrollTop = st;
+  if (qf) { const q = $('lgdQ'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  const fk = o.querySelector('input[name=lgdK]');
+  if (fk) { const sw = () => { const v = o.querySelector('input[name=lgdK]:checked').value; $('lgdUrl').hidden = v !== 'link'; $('lgdFile').hidden = v !== 'file'; }; o.querySelectorAll('input[name=lgdK]').forEach(x => x.onchange = sw); sw(); }
+}
+function openCenter(tab) {
+  if (!isRv(ME())) return;
+  if (tab) cTab = tab; form = null; cSig = '';
+  const o = dlg('lgdCenter', '', 'fa-inbox', 'מסמכים שהועלו ממסך הכניסה', 'בדיקה, דחייה עם סיבה, אישור ומסירת קובץ / קישור למשתמש', '');
+  o.addEventListener('click', onCenterClick);
+  o.addEventListener('input', e => { if (e.target.id === 'lgdQ') { cQ = e.target.value; renderCenter(); } });
+  renderCenter(true);
+}
+window.lgdOpenCenter = openCenter;
+const who = () => { const u = ME() || {}; return { id: u.id || '', name: u.name || '' }; };
+async function onCenterClick(e) {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  e.preventDefault();
+  const a = b.dataset.a, { r, f } = b.dataset.r ? findF(b.dataset.r, b.dataset.k) : {};
+  const W = who();
+  if (a === 'tab') { cTab = b.dataset.t; form = null; return renderCenter(); }
+  if (a === 'cancel') { form = null; return renderCenter(); }
+  if (a === 'view') { if (f) { fileOpen(f.fid); if (r && !r.seenR.includes(W.id)) { r.seenR.push(W.id); save(); } } return; }
+  if (a === 'dview') { if (f && f.deliv && f.deliv.fid) fileOpen(f.deliv.fid); return; }
+  if (!r) return;
+  if (a === 'ok') {
+    f.st = 'ok'; f.why = ''; f.rAt = nowIso(); f.rBy = W.name; f.seenU = false; r.upd = nowIso();
+    log(`העלאת מסמכים: הקובץ "${f.name}" של ${r.uname} סומן תקין והועבר להמשך טיפול`); save(); note('✅ נשלחה הודעה למשתמש שהקובץ תקין');
+    if (cTab === 'p') cTab = 'ok';
+    form = { r: r.id, k: f.k, t: 'dlv' }; return renderCenter();
+  }
+  if (a === 'rejf') { form = { r: r.id, k: f.k, t: 'rej' }; renderCenter(); setTimeout(() => $('lgdWhy') && $('lgdWhy').focus(), 30); return; }
+  if (a === 'rejgo') {
+    const why = ($('lgdWhy').value || '').trim(); if (!why) return alert('יש לכתוב סיבת דחייה');
+    f.st = 'rej'; f.why = why; f.rAt = nowIso(); f.rBy = W.name; f.seenU = false; r.upd = nowIso(); form = null;
+    log(`העלאת מסמכים: הקובץ "${f.name}" של ${r.uname} נדחה – ${why}`); save(); note('ההודעה על הדחייה נשלחה למשתמש'); return renderCenter();
+  }
+  if (a === 'undo') { if (!confirm('להחזיר את הקובץ למצב "ממתין לבדיקה"?')) return; f.st = 'p'; f.why = ''; f.rAt = ''; f.rBy = ''; f.seenU = true; save(); return renderCenter(); }
+  if (a === 'dlvf') { form = { r: r.id, k: f.k, t: 'dlv' }; return renderCenter(); }
+  if (a === 'undlv') { if (!confirm('לבטל את המסירה? המשתמש לא יראה יותר את הקובץ / הקישור.')) return; delete f.deliv; save(); return renderCenter(); }
+  if (a === 'dlvgo') {
+    const kind = (document.querySelector('#lgdCenter input[name=lgdK]:checked') || {}).value || 'link';
+    const nt = ($('lgdDNote').value || '').trim();
+    let d;
+    if (kind === 'link') {
+      const url = ($('lgdUrl').value || '').trim();
+      if (!/^https?:\/\/\S+$/i.test(url)) return alert('יש להזין קישור תקין שמתחיל ב-https://');
+      d = { kind: 'link', url };
+    } else {
+      const fl = $('lgdFile').files[0]; if (!fl) { $('lgdFile').hidden = false; return alert('יש לבחור קובץ לצירוף'); }
+      b.disabled = true; b.innerHTML = '⏳ מעלה...';
+      const m = await store(fl); if (!m) { b.disabled = false; b.textContent = 'שליחה למשתמש'; return; }
+      d = { kind: 'file', fid: m.id, fname: fl.name, fsize: fl.size };
+    }
+    const cur = findF(r.id, f.k).f; if (!cur) return;   /* הנתונים עשויים להתרענן מהענן בזמן ההעלאה */
+    cur.deliv = Object.assign(d, { note: nt, at: nowIso(), by: W.id, byName: W.name, conf: '' });
+    cur.seenU = false; findF(r.id, f.k).r.upd = nowIso(); form = null;
+    log(`העלאת מסמכים: נמסר ל-${r.uname} ${kind === 'link' ? 'קישור לצפייה' : 'קובץ "' + d.fname + '"'} בהמשך לקובץ "${f.name}"`);
+    save(); note('✅ נשלח למשתמש. לאחר שיאשר הורדה – הגישה תיחסם'); return renderCenter(true);
+  }
+  if (a === 'delreq') {
+    if (!isAdm(ME()) || !confirm(`למחוק את הבקשה "${r.subj}" של ${r.uname} וכל הקבצים שבה?`)) return;
+    r.files.forEach(x => { try { if (window.removeFile) removeFile(x.fid); } catch (er) { } });
+    appData.loginDocs.reqs = LD().reqs.filter(x => x.id !== r.id);
+    log(`העלאת מסמכים: נמחקה הבקשה "${r.subj}" של ${r.uname}`); save(); return renderCenter(true);
+  }
+}
+
+/* ---------- התראה למבקר אחרי התחברות + עדכונים חיים ---------- */
+let notified = new Set(), notifiedConf = new Set(), loginPopDone = '';
+function reviewerPop(onlyNew) {
+  const u = ME(); if (!isRv(u)) return;
+  const pend = [], conf = [];
+  LD().reqs.forEach(r => r.files.forEach(f => {
+    if (f.st === 'p' && (!onlyNew || !notified.has(f.k))) pend.push({ r, f });
+    if (f.deliv && f.deliv.conf && !f.deliv.seenBy && f.deliv.by === u.id && !notifiedConf.has(f.k)) conf.push({ r, f });
+  }));
+  LD().reqs.forEach(r => r.files.forEach(f => { if (f.st === 'p') notified.add(f.k); }));
+  if (!pend.length && !conf.length) return;
+  if ($('lgdCenter')) { conf.forEach(({ f }) => { notifiedConf.add(f.k); f.deliv.seenBy = true; }); if (conf.length) save(); renderCenter(); if (pend.length) note(`📥 הועלו ${pend.length} מסמכים חדשים ממסך הכניסה`); return; }
+  dlg('lgdRvPop', 'sm', 'fa-bell', !pend.length ? 'עדכונים ממשתמשי ההעלאה' : onlyNew ? 'מסמכים חדשים הועלו ממסך הכניסה' : 'מסמכים ממתינים לבדיקה', '',
+    (pend.length ? `<div style="font-weight:800;margin-bottom:6px">${pend.length} קבצים ממתינים לבדיקה:</div>` + pend.slice(0, 12).map(({ r, f }) => `<div class="lgp-f" style="border-top:1px dashed #e2e8f0"><div class="nm">${E(f.name)}<small>${E(r.uname)} · ${E(r.subj)} · ${fmt(r.at)}</small></div><button type="button" class="lgp-btn o s" data-v="${E(f.fid)}"><i class="fa-solid fa-eye"></i> צפייה</button></div>`).join('') + (pend.length > 12 ? `<div class="lgp-empty">ועוד ${pend.length - 12}...</div>` : '') : '')
+    + (conf.length ? `<div style="font-weight:800;margin:10px 0 6px;color:#065f46">אישורי הורדה מהמשתמשים:</div>` + conf.map(({ r, f }) => `<div style="font-size:13px;padding:4px 0">✅ ${E(r.uname)} הוריד/ה ואישר/ה את ${f.deliv.kind === 'link' ? 'הקישור' : '"' + E(f.deliv.fname) + '"'} (${fmt(f.deliv.conf)}) – הגישה נחסמה</div>`).join('') : '')
+    + `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="lgp-btn" data-go="1"><i class="fa-solid fa-inbox"></i> פתיחה לבדיקה</button><button type="button" class="lgp-btn o" data-close="1">אחר כך</button></div>`,
+    () => { conf.forEach(({ f }) => { notifiedConf.add(f.k); f.deliv.seenBy = true; }); if (conf.length) save(); }
+  ).addEventListener('click', e => {
+    const v = e.target.closest('[data-v]'); if (v) return fileOpen(v.dataset.v);
+    if (e.target.closest('[data-go]')) { $('lgdRvPop')?.remove(); conf.forEach(({ f }) => { notifiedConf.add(f.k); f.deliv.seenBy = true; }); if (conf.length) save(); openCenter('p'); }
+  });
+}
+
+/* ---------- כפתור בכותרת העליונה ---------- */
+function hdrBtn() {
+  let b = $('lgdHdrBtn');
+  if (!b) {
+    const ref = document.querySelector('header button[onclick="openPwModal(false)"]'); if (!ref) return;
+    ref.insertAdjacentHTML('beforebegin', `<button id="lgdHdrBtn" type="button" title="מסמכים שהועלו ממסך הכניסה" class="text-xs bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700"><i class="fa-solid fa-inbox text-sky-300"></i><span class="bd" hidden></span></button>`);
+    b = $('lgdHdrBtn'); b.onclick = () => openCenter(pendCount() ? 'p' : 'all');
+  }
+  const show = isRv(ME()); b.style.display = show ? '' : 'none';
+  const n = show ? pendCount() : 0, bd = b.querySelector('.bd'); bd.hidden = !n; bd.textContent = n > 99 ? '99+' : n;
+}
+
+/* ======================================================================
+   3) לוח בקרה לאדמין – הגדרת משתמשי העלאה ומשתמשי צפייה/בדיקה
+   ====================================================================== */
+function adminCard() {
+  const v = $('view-admin'); if (!v) return;
+  let c = $('lgdAdmin');
+  const allow = (() => { const u = ME(); return isAdm(u) || (typeof can === 'function' && can('emp_manage')); })();
+  if (!c) {
+    if (!allow) return;
+    c = document.createElement('div'); c.id = 'lgdAdmin'; c.className = 'bg-white rounded-xl border p-4 space-y-3';
+    const head = v.firstElementChild; head.insertAdjacentElement('afterend', c);
+    c.addEventListener('change', onAdminChange);
+    c.addEventListener('click', e => { if (e.target.closest('[data-open]')) openCenter(pendCount() ? 'p' : 'all'); });
+  }
+  c.style.display = allow ? '' : 'none'; if (!allow) return;
+  const d = LD(), emps = (appData.employees || []).filter(e => e.role !== 'admin' && e.id !== 'guest');
+  const pc = pendCount();
+  c.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3">
+      <div><h3 class="font-bold text-base flex items-center"><i class="fa-solid fa-file-arrow-up text-indigo-600 ml-2"></i> העלאת מסמכים ממסך הכניסה</h3>
+      <p class="text-xs text-gray-500">משתמש שמסומן "העלאה בלבד" יראה אחרי ההתחברות רק מסך להעלאת קבצי PDF / Word – בלי גישה למערכת. מנהל המערכת ומי שמסומן "צפייה ובדיקה" יקבלו התראה אחרי ההתחברות, יוכלו לצפות במסמכים, לדחות עם סיבה או לאשר, ולמסור למשתמש קישור לצפייה או קובץ מאושר (המשתמש חייב לאשר הורדה – ואז הגישה נחסמת). לשני הסוגים מתווספת אוטומטית הרשאת העלאת קבצים.</p></div>
+      <button type="button" data-open="1" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"><i class="fa-solid fa-inbox"></i> מרכז המסמכים${pc ? ` <span class="bg-red-600 text-white rounded-full px-2 text-xs">${pc}</span>` : ''}</button></div>
+    ${emps.length ? `<div class="overflow-x-auto"><table><thead><tr><th>עובד</th><th>שם משתמש</th><th>תפקיד</th><th class="c">העלאה בלבד ממסך הכניסה</th><th class="c">צפייה ובדיקת מסמכים</th></tr></thead><tbody>
+      ${emps.map(e => `<tr${e.active === false ? ' style="opacity:.55"' : ''}><td class="font-semibold">${E(e.name)}</td><td dir="ltr" style="text-align:right">@${E(e.username || '')}</td><td>${E(e.roleTitle || '')}</td>
+        <td class="c"><input type="checkbox" id="lgdA-up-${E(e.id)}" data-lg="up" data-id="${E(e.id)}" ${d.up.includes(e.id) ? 'checked' : ''}></td>
+        <td class="c"><input type="checkbox" id="lgdA-rv-${E(e.id)}" data-lg="rv" data-id="${E(e.id)}" ${d.rv.includes(e.id) ? 'checked' : ''} ${d.up.includes(e.id) ? 'disabled title="משתמש העלאה בלבד לא יכול לבדוק מסמכים"' : ''}></td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="text-[11px] text-gray-500">מנהלי מערכת תמיד מקבלים את ההתראות ויכולים לבדוק מסמכים. כדי לפתוח משתמש חדש להעלאה – הוסף עובד חדש (כפתור "הוסף עובד חדש") וסמן אותו כאן.</p>`
+      : '<p class="text-sm text-gray-500">אין עובדים (שאינם מנהלי מערכת). הוסף עובד חדש ואז סמן אותו כאן.</p>'}`;
+}
+function onAdminChange(e) {
+  const x = e.target.closest('[data-lg]'); if (!x) return;
+  const d = LD(), id = x.dataset.id, k = x.dataset.lg, emp = (appData.employees || []).find(z => z.id === id); if (!emp) return;
+  if (k === 'up' && x.checked && !confirm(`${emp.name} יוכל/תוכל אחרי ההתחברות רק להעלות קבצי PDF / Word ממסך ההעלאה, בלי גישה לשאר המערכת. להמשיך?`)) { x.checked = false; return; }
+  const list = d[k].filter(z => z !== id); if (x.checked) list.push(id); d[k] = list;
+  if (k === 'up' && x.checked) d.rv = d.rv.filter(z => z !== id);
+  if (x.checked) { emp.permissions = arr(emp.permissions); if (!emp.permissions.includes('file_upload')) emp.permissions.push('file_upload'); }
+  log(`לוח בקרה: ${emp.name} – ${k === 'up' ? 'העלאת מסמכים ממסך הכניסה' : 'צפייה ובדיקת מסמכים שהועלו'} ${x.checked ? 'הופעל' : 'בוטל'}`);
+  save(); adminCard(); hdrBtn();
+}
+
+/* ======================================================================
+   חיבור למערכת
+   ====================================================================== */
+function tick() {
+  const u = ME(), ls = $('loginScreen'), inApp = u && ls && ls.classList.contains('hidden');
+  const pw = $('pwModal'), pwOpen = pw && !pw.classList.contains('hidden');
+  if (inApp && isUp(u)) {
+    if (!pwOpen) showPortal();   /* החלפת סיסמה ראשונה – קודם מסיימים אותה */
+    else hidePortal();
+    const s = sigUp(); if ($('lgpPortal') && !$('lgpPortal').hidden && s !== lastSig) { lastSig = s; renderPortalLists(); popUploader(); }
+  } else hidePortal();
+  hdrBtn();
+  if (inApp && isRv(u)) {
+    const key = u.id + '|' + (sessionStorage.getItem('uid') || localStorage.getItem('uid') || '');
+    if (loginPopDone !== key) { loginPopDone = key; notified = new Set(); setTimeout(() => reviewerPop(false), 1200); }
+    else reviewerPop(true);
+    if ($('lgdCenter')) { const ae = document.activeElement; if (!(ae && $('lgdCenter').contains(ae) && /TEXTAREA|INPUT/.test(ae.tagName) && ae.id !== 'lgdQ') && !form) renderCenter(); }
+  }
+  if (!inApp) { loginPopDone = ''; opened = new Set(); ['lgdCenter', 'lgdRvPop', 'lgdUpPop'].forEach(i => $(i)?.remove()); }
+  const v = $('view-admin'); if (v && !v.classList.contains('hidden') && !(document.activeElement && $('lgdAdmin') && $('lgdAdmin').contains(document.activeElement))) { const s = JSON.stringify([LD().up, LD().rv, pendCount(), (appData.employees || []).length]); if (s !== adminCard.__s) { adminCard.__s = s; adminCard(); } }
+}
+const _ea = window.enterApp;
+if (typeof _ea === 'function') window.enterApp = function () { const r = _ea.apply(this, arguments); try { tick(); } catch (e) { console.warn('lgd', e); } return r; };
+const _lo = window.logout;
+if (typeof _lo === 'function') window.logout = function () { hidePortal(); return _lo.apply(this, arguments); };
+const _ai = window.admPanelsInit;
+if (typeof _ai === 'function') window.admPanelsInit = function () { const r = _ai.apply(this, arguments); try { adminCard.__s = ''; adminCard(); } catch (e) { console.warn('lgd admin', e); } return r; };
+setInterval(() => { try { tick(); } catch (e) { console.warn('lgd tick', e); } }, 1500);
+setTimeout(() => { try { tick(); } catch (e) { } }, 300);
+})();
+</script>
+
 </body>
 </html>
