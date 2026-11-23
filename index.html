@@ -29676,6 +29676,9 @@ if (typeof prev === 'function') window.pdfRender = function (el, o) {
 #lgpPortal{position:fixed;inset:0;z-index:2147482500;background:linear-gradient(160deg,#0f172a,#1e1b4b);overflow-y:auto;direction:rtl;font-family:Assistant,Arial,sans-serif;color:#0f172a;padding:18px}
 #lgpPortal[hidden]{display:none}
 body.lgp-on{overflow:hidden}
+/* משתמש העלאה בלבד: כל המערכת מוסתרת – רק מסך ההעלאה, החלפת סיסמה וחלונות ההודעות */
+html.lgp-lock body>*:not(#lgpPortal):not(#pwModal):not(#udlg):not(#loginScreen):not(.lgd-ov):not(script):not(style):not(link){display:none!important}
+html.lgp-lock body{overflow:hidden!important;background:#0f172a!important}
 .lgp-w{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .lgp-h{display:flex;align-items:center;gap:12px;color:#fff;flex-wrap:wrap}
 .lgp-h img{height:44px;max-width:150px;object-fit:contain;background:#fff;border-radius:10px;padding:3px}
@@ -29771,7 +29774,8 @@ function LD() {
 }
 const ME = () => { try { return me(); } catch (e) { return null; } };
 const isAdm = u => !!u && u.role === 'admin';
-const isUp = u => !!u && !isAdm(u) && u.id !== 'guest' && LD().up.includes(u.id);
+const isUp = u => !!u && !isAdm(u) && u.id !== 'guest' && (LD().up.includes(u.id) || u.uploadOnly === true);
+const lock = on => document.documentElement.classList.toggle('lgp-lock', !!on);
 const isRv = u => !!u && u.id !== 'guest' && !isUp(u) && (isAdm(u) || LD().rv.includes(u.id));
 const empName = id => { const e = (appData.employees || []).find(x => x.id === id); return e ? e.name : ''; };
 const findF = (rid, k) => { const r = LD().reqs.find(x => x.id === rid); return { r, f: r && r.files.find(x => x.k === k) }; };
@@ -30128,7 +30132,7 @@ function adminCard() {
       <button type="button" data-open="1" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"><i class="fa-solid fa-inbox"></i> מרכז המסמכים${pc ? ` <span class="bg-red-600 text-white rounded-full px-2 text-xs">${pc}</span>` : ''}</button></div>
     ${emps.length ? `<div class="overflow-x-auto"><table><thead><tr><th>עובד</th><th>שם משתמש</th><th>תפקיד</th><th class="c">העלאה בלבד ממסך הכניסה</th><th class="c">צפייה ובדיקת מסמכים</th></tr></thead><tbody>
       ${emps.map(e => `<tr${e.active === false ? ' style="opacity:.55"' : ''}><td class="font-semibold">${E(e.name)}</td><td dir="ltr" style="text-align:right">@${E(e.username || '')}</td><td>${E(e.roleTitle || '')}</td>
-        <td class="c"><input type="checkbox" id="lgdA-up-${E(e.id)}" data-lg="up" data-id="${E(e.id)}" ${d.up.includes(e.id) ? 'checked' : ''}></td>
+        <td class="c"><input type="checkbox" id="lgdA-up-${E(e.id)}" data-lg="up" data-id="${E(e.id)}" ${d.up.includes(e.id) || e.uploadOnly === true ? 'checked' : ''}></td>
         <td class="c"><input type="checkbox" id="lgdA-rv-${E(e.id)}" data-lg="rv" data-id="${E(e.id)}" ${d.rv.includes(e.id) ? 'checked' : ''} ${d.up.includes(e.id) ? 'disabled title="משתמש העלאה בלבד לא יכול לבדוק מסמכים"' : ''}></td></tr>`).join('')}
       </tbody></table></div>
       <p class="text-[11px] text-gray-500">מנהלי מערכת תמיד מקבלים את ההתראות ויכולים לבדוק מסמכים. כדי לפתוח משתמש חדש להעלאה – הוסף עובד חדש (כפתור "הוסף עובד חדש") וסמן אותו כאן.</p>`
@@ -30139,6 +30143,7 @@ function onAdminChange(e) {
   const d = LD(), id = x.dataset.id, k = x.dataset.lg, emp = (appData.employees || []).find(z => z.id === id); if (!emp) return;
   if (k === 'up' && x.checked && !confirm(`${emp.name} יוכל/תוכל אחרי ההתחברות רק להעלות קבצי PDF / Word ממסך ההעלאה, בלי גישה לשאר המערכת. להמשיך?`)) { x.checked = false; return; }
   const list = d[k].filter(z => z !== id); if (x.checked) list.push(id); d[k] = list;
+  if (k === 'up') emp.uploadOnly = !!x.checked;
   if (k === 'up' && x.checked) d.rv = d.rv.filter(z => z !== id);
   if (x.checked) { emp.permissions = arr(emp.permissions); if (!emp.permissions.includes('file_upload')) emp.permissions.push('file_upload'); }
   log(`לוח בקרה: ${emp.name} – ${k === 'up' ? 'העלאת מסמכים ממסך הכניסה' : 'צפייה ובדיקת מסמכים שהועלו'} ${x.checked ? 'הופעל' : 'בוטל'}`);
@@ -30151,6 +30156,7 @@ function onAdminChange(e) {
 function tick() {
   const u = ME(), ls = $('loginScreen'), inApp = u && ls && ls.classList.contains('hidden');
   const pw = $('pwModal'), pwOpen = pw && !pw.classList.contains('hidden');
+  lock(inApp && isUp(u));
   if (inApp && isUp(u)) {
     if (!pwOpen) showPortal();   /* החלפת סיסמה ראשונה – קודם מסיימים אותה */
     else hidePortal();
@@ -30167,13 +30173,50 @@ function tick() {
   const v = $('view-admin'); if (v && !v.classList.contains('hidden') && !(document.activeElement && $('lgdAdmin') && $('lgdAdmin').contains(document.activeElement))) { const s = JSON.stringify([LD().up, LD().rv, pendCount(), (appData.employees || []).length]); if (s !== adminCard.__s) { adminCard.__s = s; adminCard(); } }
 }
 const _ea = window.enterApp;
-if (typeof _ea === 'function') window.enterApp = function () { const r = _ea.apply(this, arguments); try { tick(); } catch (e) { console.warn('lgd', e); } return r; };
+if (typeof _ea === 'function') window.enterApp = function () { try { lock(isUp(ME())); } catch (e) { } const r = _ea.apply(this, arguments); try { tick(); } catch (e) { console.warn('lgd', e); } return r; };
 const _lo = window.logout;
-if (typeof _lo === 'function') window.logout = function () { hidePortal(); return _lo.apply(this, arguments); };
+if (typeof _lo === 'function') window.logout = function () { hidePortal(); lock(false); return _lo.apply(this, arguments); };
 const _ai = window.admPanelsInit;
 if (typeof _ai === 'function') window.admPanelsInit = function () { const r = _ai.apply(this, arguments); try { adminCard.__s = ''; adminCard(); } catch (e) { console.warn('lgd admin', e); } return r; };
+const _st = window.switchTab;
+if (typeof _st === 'function') window.switchTab = function () { try { const u = ME(); if (u && isUp(u)) return; } catch (e) { } return _st.apply(this, arguments); };
+try { tick(); } catch (e) { }
 setInterval(() => { try { tick(); } catch (e) { console.warn('lgd tick', e); } }, 1500);
 setTimeout(() => { try { tick(); } catch (e) { } }, 300);
+})();
+</script>
+
+<!-- ========== הקלדה בעברית במסך הכניסה (גם באפליקציה המותקנת) ==========
+     בטלפון ובאפליקציה המותקנת, שדה מסוג "סיסמה" נועל את המקלדת לאנגלית בלבד.
+     השדות הופכים לשדות טקסט רגילים שהתוכן שלהם מוסתר בנקודות – כך אפשר להקליד בעברית, עם כפתור עין להצגה -->
+<style id="heLoginCss">
+.he-pw{-webkit-text-security:disc;text-security:disc}
+.he-pw.show{-webkit-text-security:none;text-security:none}
+.he-pw-w{position:relative;display:block}
+.he-pw-w input{padding-left:38px!important}
+.he-pw-eye{position:absolute;left:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:0;background:transparent;color:#64748b;cursor:pointer;border-radius:8px;font-size:14px}
+.he-pw-eye:hover{background:#eef2ff;color:#4f46e5}
+</style>
+<script id="heLoginJs">
+(function () {
+const fix = (id, eye) => {
+  const el = document.getElementById(id); if (!el || el.dataset.he) return;
+  el.dataset.he = '1';
+  if (el.type === 'password') { el.type = 'text'; el.classList.add('he-pw'); }
+  ['autocapitalize', 'autocorrect'].forEach(a => el.setAttribute(a, 'off'));
+  el.setAttribute('spellcheck', 'false'); el.setAttribute('lang', 'he'); el.setAttribute('dir', 'auto'); el.setAttribute('inputmode', 'text');
+  if (id === 'loginUser') el.setAttribute('autocomplete', 'off');
+  if (eye && el.classList.contains('he-pw')) {
+    const w = document.createElement('span'); w.className = 'he-pw-w'; el.parentNode.insertBefore(w, el); w.appendChild(el);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'he-pw-eye'; b.title = 'הצגת / הסתרת הסיסמה'; b.innerHTML = '<i class="fa-solid fa-eye"></i>';
+    b.addEventListener('click', () => { const on = el.classList.toggle('show'); b.innerHTML = `<i class="fa-solid ${on ? 'fa-eye-slash' : 'fa-eye'}"></i>`; el.focus(); });
+    w.appendChild(b);
+  }
+};
+const run = () => { fix('loginUser'); fix('loginPass', true); fix('pwNew', true); fix('pwNew2', true); const lp = document.getElementById('loginPass'); if (lp) lp.classList.remove('show'); };
+run(); document.addEventListener('DOMContentLoaded', run);
+/* אחרי התנתקות – הסיסמה חוזרת להיות מוסתרת */
+const lo = window.logout; if (typeof lo === 'function') window.logout = function () { const r = lo.apply(this, arguments); try { run(); document.querySelectorAll('.he-pw').forEach(x => x.classList.remove('show')); } catch (e) { } return r; };
 })();
 </script>
 
