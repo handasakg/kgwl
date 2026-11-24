@@ -29729,6 +29729,8 @@ html.lgp-lock body{overflow:hidden!important;background:#0f172a!important}
 .lgd-hd .t{flex:1;font-size:18px;font-weight:900}.lgd-hd .t small{display:block;font-size:12px;font-weight:600;color:#64748b}
 .lgd-hd .x{border:0;background:transparent!important;font-size:20px;color:#64748b;cursor:pointer;width:36px;height:36px;border-radius:10px}
 .lgd-hd .x:hover{background:#fee2e2;color:#dc2626}
+.lgd-calc{border:1px solid #c7d2fe;background:#eef2ff!important;color:#3730a3!important;border-radius:10px;padding:7px 12px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.lgd-calc:hover{background:#4f46e5!important;color:#fff!important}
 .lgd-bd{padding:14px 18px;overflow-y:auto;overscroll-behavior:contain}
 .lgd-tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
 .lgd-tb button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:999px;padding:6px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
@@ -30141,6 +30143,14 @@ function openCenter(tab) {
   if (!isRv(ME())) return;
   if (tab) cTab = tab; form = null; cSig = '';
   const o = dlg('lgdCenter', '', 'fa-inbox', 'מסמכים שהועלו ממסך הכניסה', 'תיקייה לכל משתמש · בדיקה, דחייה עם סיבה, אישור, מסירה ושליחה לאימייל', '');
+  /* כפתור מחשבון – רק במרכז הבדיקה (למי שמורשה לצפות ולאשר) */
+  o.querySelector('.lgd-hd .x').insertAdjacentHTML('beforebegin', `<button type="button" class="lgd-calc" id="lgdCalcBtn" title="מחשבון"><i class="fa-solid fa-calculator"></i> מחשבון</button>`);
+  $('lgdCalcBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    if (!isRv(ME())) return;
+    try { (window.calcOpen || calcOpen)(); } catch (er) { return alert('המחשבון לא זמין'); }
+    const m = $('calcModal'); if (m) { m.style.zIndex = '2147482700'; m.style.position = 'fixed'; m.style.inset = '0'; const i = $('calcIn'); if (i) setTimeout(() => i.focus(), 50); }
+  });
   o.addEventListener('click', onCenterClick);
   o.addEventListener('input', e => { if (e.target.id === 'lgdQ') { cQ = e.target.value; renderCenter(); } });
   o.addEventListener('change', e => {
@@ -30482,6 +30492,67 @@ const run = () => { fix('loginUser'); fix('loginPass', true); fix('pwNew', true)
 run(); document.addEventListener('DOMContentLoaded', run);
 /* אחרי התנתקות – הסיסמה חוזרת להיות מוסתרת */
 const lo = window.logout; if (typeof lo === 'function') window.logout = function () { const r = lo.apply(this, arguments); try { run(); document.querySelectorAll('.he-pw').forEach(x => x.classList.remove('show')); } catch (e) { } return r; };
+})();
+</script>
+
+<!-- ========== מחשבון: חישוב תקורה + ברירת מחדל לאחוז התקורה ========== -->
+<script id="calcOvhJs">
+(function () {
+const $ = id => document.getElementById(id);
+const r2 = v => Math.round(v * 100) / 100;
+const money = v => (isNaN(v) ? '—' : r2(v).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' ₪');
+const defOvh = () => { const v = appData.calcOvhDef; return (v === '' || v == null || isNaN(Number(v))) ? '' : Number(v); };
+const val = () => { try { return calcEval($('calcIn').value); } catch (e) { return NaN; } };
+const pct = () => { const x = $('calcOvh'); return x && x.value !== '' ? Number(x.value) : NaN; };
+function paint() {
+  const o = $('calcOvhOut'); if (!o) return;
+  const v = val(), p = pct();
+  if (isNaN(v) || isNaN(p)) { o.innerHTML = isNaN(p) ? 'הזן אחוז תקורה' : 'הזן סכום'; return; }
+  o.innerHTML = `תקורה (${p}%): <b>${money(v * p / 100)}</b> · סכום כולל תקורה: <b>${money(v * (1 + p / 100))}</b>`;
+  const d = defOvh(), s = $('calcOvhDefTxt'); if (s) s.textContent = d === '' ? 'לא הוגדרה ברירת מחדל' : `ברירת מחדל: ${d}%`;
+}
+function inject() {
+  const m = $('calcModal'); if (!m || $('calcOvh')) return;
+  const anchor = $('calcApplyBtn'); if (!anchor) return;
+  anchor.insertAdjacentHTML('beforebegin', `<div class="border-t pt-2 space-y-1.5" id="calcOvhBox">
+    <div class="flex items-center gap-2 text-xs flex-wrap"><span class="font-semibold">אחוז תקורה:</span>
+      <input id="calcOvh" type="number" step="0.01" min="0" inputmode="decimal" placeholder="%" title="אחוז התקורה לחישוב" class="p-1 border rounded w-20 text-sm">
+      <button type="button" id="calcOvhSave" class="px-2 py-1 border rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold" title="שמירת האחוז כברירת מחדל לכל פתיחה של המחשבון"><i class="fa-solid fa-floppy-disk ml-1"></i>קבע כברירת מחדל</button>
+      <span id="calcOvhDefTxt" class="text-[11px] text-gray-500"></span></div>
+    <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+      <button type="button" data-ovh="only" class="p-1.5 border rounded-lg bg-sky-50 hover:bg-sky-100 font-semibold" title="סכום × אחוז התקורה">תקורה בלבד</button>
+      <button type="button" data-ovh="add" class="p-1.5 border rounded-lg bg-emerald-50 hover:bg-emerald-100 font-semibold" title="סכום + תקורה">+ תקורה</button>
+      <button type="button" data-ovh="sub" class="p-1.5 border rounded-lg bg-amber-50 hover:bg-amber-100 font-semibold" title="הסכום לפני התקורה">הורד תקורה</button></div>
+    <div id="calcOvhOut" class="text-xs text-gray-700 bg-gray-50 rounded-lg p-1.5"></div></div>`);
+  $('calcOvh').addEventListener('input', paint);
+  $('calcOvhSave').addEventListener('click', () => {
+    const x = $('calcOvh').value.trim();
+    if (x !== '' && (isNaN(Number(x)) || Number(x) < 0)) return alert('אחוז תקורה לא תקין');
+    appData.calcOvhDef = x === '' ? '' : Number(x);
+    try { saveData(); } catch (e) { }
+    try { addLog(`מחשבון: ברירת המחדל לתקורה ${x === '' ? 'בוטלה' : 'עודכנה ל-' + x + '%'}`); } catch (e) { }
+    try { showNotification(x === '' ? 'ברירת המחדל לתקורה בוטלה' : `✅ ברירת המחדל לתקורה: ${x}%`); } catch (e) { }
+    paint();
+  });
+  $('calcOvhBox').addEventListener('click', e => {
+    const b = e.target.closest('[data-ovh]'); if (!b) return;
+    const v = val(), p = pct();
+    if (isNaN(p)) { $('calcOvh').focus(); return alert('יש להזין אחוז תקורה'); }
+    if (isNaN(v)) return alert('יש להזין סכום במחשבון');
+    const r = b.dataset.ovh === 'only' ? v * p / 100 : b.dataset.ovh === 'add' ? v * (1 + p / 100) : v / (1 + p / 100);
+    $('calcIn').value = String(r2(r)); try { calcLive(); } catch (er) { } $('calcIn').focus();
+  });
+}
+const _open = window.calcOpen;
+if (typeof _open === 'function') window.calcOpen = function () {
+  const res = _open.apply(this, arguments);
+  try { inject(); const d = defOvh(); if ($('calcOvh')) $('calcOvh').value = d === '' ? '' : d; paint(); } catch (e) { console.warn('calcOvh', e); }
+  return res;
+};
+const _close = window.calcClose;
+if (typeof _close === 'function') window.calcClose = function () { const r = _close.apply(this, arguments); try { const m = $('calcModal'); if (m) { m.style.zIndex = ''; m.style.position = ''; m.style.inset = ''; } } catch (e) { } return r; };
+const _live = window.calcLive;
+if (typeof _live === 'function') window.calcLive = function () { const r = _live.apply(this, arguments); try { paint(); } catch (e) { } return r; };
 })();
 </script>
 
