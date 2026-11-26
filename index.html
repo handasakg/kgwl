@@ -3004,7 +3004,7 @@ function doPost(e) {
                 <h3 style="font-size:17px;font-weight:800;margin:0 0 12px 0"><i class="fa-solid fa-file-pdf" style="color:#dc2626;margin-left:6px"></i>ייצוא PDF</h3>
                 <label style="display:block;font-size:13px;font-weight:700;margin-bottom:4px">הערות:</label>
                 <textarea id="pdfNotesTxt" rows="5" placeholder="מלל שיופיע מתחת לטבלה (אפשר להשאיר ריק)" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:13px;resize:vertical;background:#fff;color:#111827"></textarea>
-                <label style="display:block;font-size:13px;font-weight:700;margin:10px 0 4px">גורם מאשר:</label>
+                <label style="display:block;font-size:13px;font-weight:700;margin:10px 0 4px">גורם מאשר אגף חשבות:</label>
                 <input id="pdfNotesHnd" type="text" value="${E(lastH)}" placeholder="שם הגורם המאשר (אפשר להשאיר ריק)" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:13px;background:#fff;color:#111827">
                 <div style="display:flex;gap:8px;margin-top:14px">
                     <button id="pdfNotesGo" style="flex:1;background:#dc2626;color:#fff;border:0;border-radius:8px;padding:9px;font-weight:700;cursor:pointer"><i class="fa-solid fa-file-pdf" style="margin-left:4px"></i> ייצוא</button>
@@ -3022,9 +3022,10 @@ function doPost(e) {
                     <div style="border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; min-height:70px; font-size:12px;">
                         <b>הערות:</b> ${notes ? E(notes).replace(/\n/g, '<br>') : ''}
                     </div>
-                    <div style="width:260px; margin-right:auto; margin-top:28px; font-size:12px; text-align:right;">
-                        <b>גורם מאשר:</b> <span style="display:inline-block; min-width:170px; border-bottom:1px solid #334155; padding:0 4px;">${E(hnd) || '&nbsp;'}</span>
-                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:30px; margin-top:28px; font-size:12px; direction:rtl;">
+        <div style="width:270px; text-align:right;"><b>גורם מאשר אגף חשבות:</b> <span style="display:inline-block; min-width:150px; border-bottom:1px solid #334155; padding:0 4px;">${E(hnd) || '&nbsp;'}</span></div>
+        <div style="width:270px; text-align:right;"><b>מאשר חשבון התשלום:</b><div style="height:62px; border-bottom:1px solid #334155; margin-top:6px;"></div><div style="font-size:10px; color:#64748b; text-align:center; margin-top:3px;">חתימה וחותמת</div></div>
+      </div>
                 </div>`;
                 window._pdfNotesReady = true;
                 try { run(); } finally { window._pdfNotesReady = false; window._pdfNotesHtml = ''; }
@@ -25272,7 +25273,7 @@ if (typeof _g === 'function') window.generatePDFReport = function (title, sub, h
   return _g.call(this, title, sub, headers, rows, land, extra);
 };
 /* Excel: העמודה יורדת והערות + גורם מאשר נוספים בתחתית כל גיליון */
-const noteRows = () => XN ? [[], ['הערות:', XN.notes || ''], [], ['גורם מאשר:', XN.hnd || '']] : [];
+const noteRows = () => XN ? [[], ['הערות:', XN.notes || ''], [], ['גורם מאשר אגף חשבות:', XN.hnd || '', '', 'מאשר חשבון התשלום:', ''], ['', '', '', '', '(חתימה וחותמת) ____________________']] : [];
 function hookX() {
   if (!window.XLSX || !XLSX.utils || XLSX.utils.__nn) return;
   const U = XLSX.utils, _a = U.aoa_to_sheet, _j = U.json_to_sheet; U.__nn = true;
@@ -25305,7 +25306,7 @@ function ask(fmt, go) {
     <h3 style="font-size:17px;font-weight:800;margin:0 0 12px 0"><i class="fa-solid ${ic}" style="color:${col};margin-left:6px"></i>ייצוא ${nm}</h3>
     <label for="pdfNotesTxt" style="display:block;font-size:13px;font-weight:700;margin-bottom:4px">הערות:</label>
     <textarea id="pdfNotesTxt" rows="5" placeholder="מלל שיופיע בתחתית הקובץ (אפשר להשאיר ריק)" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:13px;resize:vertical;background:#fff;color:#111827"></textarea>
-    <label for="pdfNotesHnd" style="display:block;font-size:13px;font-weight:700;margin:10px 0 4px">גורם מאשר:</label>
+    <label for="pdfNotesHnd" style="display:block;font-size:13px;font-weight:700;margin:10px 0 4px">גורם מאשר אגף חשבות:</label>
     <input id="pdfNotesHnd" type="text" value="${E(lastH)}" placeholder="שם הגורם המאשר (אפשר להשאיר ריק)" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:13px;background:#fff;color:#111827">
     <div style="display:flex;gap:8px;margin-top:14px">
       <button type="button" id="pdfNotesGo" style="flex:1;background:${col};color:#fff;border:0;border-radius:8px;padding:9px;font-weight:700;cursor:pointer"><i class="fa-solid ${ic}" style="margin-left:4px"></i> ייצוא</button>
@@ -25325,7 +25326,10 @@ function ask(fmt, go) {
     if (pdf) {
       window._pdfNotesHtml = `<div style="margin-top:22px; page-break-inside:avoid; break-inside:avoid; direction:rtl;">
         <div style="border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; min-height:70px; font-size:12px;"><b>הערות:</b> ${notes ? E(notes).replace(/\n/g, '<br>') : ''}</div>
-        <div style="width:260px; margin-right:auto; margin-top:28px; font-size:12px; text-align:right;"><b>גורם מאשר:</b> <span style="display:inline-block; min-width:170px; border-bottom:1px solid #334155; padding:0 4px;">${E(hnd) || '&nbsp;'}</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:30px; margin-top:28px; font-size:12px; direction:rtl;">
+        <div style="width:270px; text-align:right;"><b>גורם מאשר אגף חשבות:</b> <span style="display:inline-block; min-width:150px; border-bottom:1px solid #334155; padding:0 4px;">${E(hnd) || '&nbsp;'}</span></div>
+        <div style="width:270px; text-align:right;"><b>מאשר חשבון התשלום:</b><div style="height:62px; border-bottom:1px solid #334155; margin-top:6px;"></div><div style="font-size:10px; color:#64748b; text-align:center; margin-top:3px;">חתימה וחותמת</div></div>
+      </div>
       </div>`;
       window._pdfNotesReady = true;
     } else XN = { notes, hnd };
@@ -29639,11 +29643,14 @@ const TABS = ['contracts', 'bills', 'guarantees', 'reports', 'order-status'];
 const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const activeTab = () => { const v = [...document.querySelectorAll('section.view-content')].find(s => !s.classList.contains('hidden')); return v ? v.id.replace(/^view-/, '') : ''; };
 window.pdfCompactTabs = TABS;
-function compact(el) {
+const LOGO_TABS = ['bills', 'order-status'];   /* חשבונות / חשבונות מאושרים + סטטוס הזמנות / הזמנות מאושרות: לוגו באמצע שורת הכותרת */
+function compact(el, withLogo) {
   if (!el || el.__pdfc) return;
   const kids = [...el.children];
   const hdr = kids.find(d => d.tagName === 'DIV' && /border-bottom:\s*2px\s+solid\s+#6366f1/i.test(d.getAttribute('style') || ''));
   if (!hdr) return;
+  const lgImg = hdr.querySelector('img');
+  const logo = withLogo ? ((lgImg && lgImg.getAttribute('src')) || (window.appData && appData.branding && appData.branding.logo) || '') : '';
   const meta = [...hdr.querySelectorAll('p')].map(p => p.textContent.replace(/\s+/g, ' ').trim()).filter(t => /מפיק הדוח|תאריך הפקה/.test(t));
   meta.sort((a, b) => (/מפיק/.test(a) ? 0 : 1) - (/מפיק/.test(b) ? 0 : 1));   /* מפיק הדוח ואחריו תאריך ההפקה */
   hdr.remove();
@@ -29658,14 +29665,20 @@ function compact(el) {
     const right = document.createElement('div'); right.style.cssText = 'min-width:0'; row.appendChild(right);
     right.appendChild(h2); h2.style.margin = '0'; h2.style.fontSize = '15px'; h2.style.lineHeight = '1.3';
     if (sub) { right.appendChild(sub); sub.style.margin = '0'; sub.style.fontSize = '10.5px'; }
-    row.insertAdjacentHTML('beforeend', metaHtml);
+    if (logo) {
+      /* שלוש עמודות: כותרת (ימין) | לוגו (באמצע) | מפיק הדוח ותאריך (שמאל) */
+      row.style.alignItems = 'center';
+      right.style.cssText = 'min-width:0;flex:1 1 0';
+      row.insertAdjacentHTML('beforeend', `<div style="flex:none;text-align:center;padding:0 8px"><img src="${E(logo)}" alt="" style="height:52px;max-width:190px;width:auto;object-fit:contain;display:block;margin:0 auto;image-rendering:-webkit-optimize-contrast"></div>`);
+      row.insertAdjacentHTML('beforeend', `<div style="flex:1 1 0;display:flex;justify-content:flex-end;min-width:0">${metaHtml}</div>`);
+    } else row.insertAdjacentHTML('beforeend', metaHtml);
   } else el.insertAdjacentHTML('afterbegin', `<div style="display:flex;justify-content:flex-end;margin-bottom:4px">${metaHtml}</div>`);
   const t = el.querySelector('table'); if (t && /margin-top/.test(t.getAttribute('style') || '')) t.style.marginTop = '6px';
   el.style.padding = '6px'; el.__pdfc = 1;
 }
 const prev = window.pdfRender;
 if (typeof prev === 'function') window.pdfRender = function (el, o) {
-  try { if (TABS.includes(activeTab())) compact(el); } catch (e) { console.warn('pdfCompact', e); }
+  try { const at = activeTab(); if (TABS.includes(at)) compact(el, LOGO_TABS.includes(at)); } catch (e) { console.warn('pdfCompact', e); }
   return prev.apply(this, arguments);
 };
 })();
@@ -30553,6 +30566,236 @@ const _close = window.calcClose;
 if (typeof _close === 'function') window.calcClose = function () { const r = _close.apply(this, arguments); try { const m = $('calcModal'); if (m) { m.style.zIndex = ''; m.style.position = ''; m.style.inset = ''; } } catch (e) { } return r; };
 const _live = window.calcLive;
 if (typeof _live === 'function') window.calcLive = function () { const r = _live.apply(this, arguments); try { paint(); } catch (e) { } return r; };
+})();
+</script>
+
+<!-- ========== ניהול מלאי: סיבה + תאריך לכל שינוי כמות, כפתור היסטוריה ליד הכמות וחלון פירוט (הוספה / עריכה / מחיקה) ========== -->
+<style id="qhCss">
+.qh-btn{display:inline-flex;align-items:center;gap:4px;border:1px solid #c7d2fe;background:#eef2ff;color:#3730a3;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:800;cursor:pointer;line-height:1.6;font-family:inherit;white-space:nowrap}
+.qh-btn:hover{background:#4f46e5;color:#fff;border-color:#4f46e5}
+.qh-btn.z{opacity:.6}
+.qh-ov{position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;direction:rtl;font-family:Assistant,Arial,sans-serif}
+.qh-dl{margin:auto 0;width:100%;max-width:860px;background:#fff;color:#0f172a;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:calc(100dvh - 32px);overflow:hidden}
+.qh-dl.sm{max-width:460px}
+.qh-hd{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.qh-hd>i{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:#4f46e5;color:#fff;font-size:16px;flex:none}
+.qh-hd .t{flex:1;font-size:17px;font-weight:900;min-width:0}.qh-hd .t small{display:block;font-size:12px;font-weight:600;color:#64748b}
+.qh-hd .x{border:0;background:transparent;font-size:19px;color:#64748b;cursor:pointer;width:34px;height:34px;border-radius:9px}
+.qh-hd .x:hover{background:#fee2e2;color:#dc2626}
+.qh-bd{padding:14px 16px;overflow-y:auto}
+.qh-sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.qh-sum div{background:#f1f5f9;border-radius:10px;padding:6px 12px;font-size:12.5px;color:#475569}.qh-sum b{color:#0f172a;font-size:15px;margin-right:4px}
+.qh-tb{width:100%;border-collapse:collapse;font-size:13px}
+.qh-tb th{background:#1e293b;color:#fff;padding:7px 6px;text-align:right;font-weight:700}
+.qh-tb td{padding:7px 6px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+.qh-tb tr:nth-child(even) td{background:#f8fafc}
+.qh-p{color:#059669;font-weight:900}.qh-m{color:#dc2626;font-weight:900}
+.qh-ic{border:0;background:none;cursor:pointer;padding:3px 6px;font-size:14px}
+.qh-ic.e{color:#4f46e5}.qh-ic.d{color:#dc2626}
+.qh-fm{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qh-fm .f{grid-column:1/-1}
+.qh-fm label{display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:4px}
+.qh-fm input,.qh-fm select,.qh-fm textarea{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #cbd5e1;border-radius:9px;font-size:14px;font-family:inherit;background:#fff;color:#0f172a}
+.qh-dir{display:flex;gap:6px}.qh-dir button{flex:1;border:1px solid #cbd5e1;background:#fff;border-radius:9px;padding:8px;font-weight:800;cursor:pointer;font-family:inherit;color:#334155}
+.qh-dir button.on.p{background:#059669;color:#fff;border-color:#059669}.qh-dir button.on.m{background:#dc2626;color:#fff;border-color:#dc2626}
+.qh-prev{grid-column:1/-1;background:#eef2ff;border-radius:9px;padding:7px 10px;font-size:13px;color:#3730a3;font-weight:700}
+.qh-ft{display:flex;gap:8px;padding:12px 16px;border-top:1px solid #e2e8f0;background:#f8fafc;flex-wrap:wrap}
+.qh-b{border:0;border-radius:9px;padding:9px 16px;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;background:#4f46e5;color:#fff}
+.qh-b.o{background:#e2e8f0;color:#334155}.qh-b.r{background:#dc2626}.qh-b.g{background:#059669}
+.qh-empty{text-align:center;color:#94a3b8;padding:18px;font-size:13px}
+.qh-chk{display:flex!important;align-items:center;gap:7px;font-weight:700;color:#334155!important}
+.qh-chk input{width:auto!important}
+</style>
+<script id="qhJs">
+(function () {
+'use strict';
+const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const N = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+const arr = v => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const fmtD = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : (d || ''); };
+const okQty = () => { try { return typeof can !== 'function' || can('inv_qty'); } catch (e) { return true; } };
+const who = () => { try { const u = (appData.employees || []).find(e => e.id === currentUserId); return u ? u.name : 'מנהל'; } catch (e) { return ''; } };
+const itemOf = id => (appData.inventory || []).find(i => i.id === id);
+const logOf = it => (it.qtyLog = arr(it.qtyLog));
+const newId = () => 'qh' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const sorted = it => logOf(it).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || N(a.ts) - N(b.ts));
+const refresh = () => { try { saveData(); } catch (e) { } try { renderInventoryTable(); } catch (e) { } try { checkAllAlerts(); } catch (e) { } };
+function setQty(it, q) { it.quantity = Math.max(0, q); it.qtyLast = it.quantity; try { invSyncToOrders(it); } catch (e) { } }
+function addEntry(it, delta, reason, date, auto) {
+  logOf(it).push({ id: newId(), delta: N(delta), reason: reason || '', date: date || today(), user: who(), ts: Date.now(), auto: auto ? 1 : 0 });
+}
+/* יתרה אחרי כל שינוי – מחושבת אחורה מהכמות הנוכחית */
+function balances(it) {
+  const L = sorted(it); let b = N(it.quantity); const out = [];
+  for (let i = L.length - 1; i >= 0; i--) { out[i] = { e: L[i], after: b, before: b - N(L[i].delta) }; b -= N(L[i].delta); }
+  return out;
+}
+const reasons = () => { const s = new Set(['קליטת סחורה', 'ניפוק לעובד', 'החזרה למלאי', 'פחת / נזק', 'ספירת מלאי', 'תיקון טעות']); (appData.inventory || []).forEach(i => arr(i.qtyLog).forEach(e => e.reason && !e.auto && s.add(e.reason))); return [...s].slice(0, 40); };
+
+function shell(cls, icon, title, sub, body, foot) {
+  const ov = document.createElement('div'); ov.className = 'qh-ov';
+  ov.innerHTML = `<div class="qh-dl ${cls}" role="dialog" aria-modal="true"><div class="qh-hd"><i class="fa-solid ${icon}"></i><div class="t">${title}${sub ? `<small>${sub}</small>` : ''}</div><button type="button" class="x" data-x aria-label="סגור"><i class="fa-solid fa-xmark"></i></button></div><div class="qh-bd">${body}</div>${foot ? `<div class="qh-ft">${foot}</div>` : ''}</div>`;
+  document.body.appendChild(ov);
+  const close = () => { ov.remove(); document.removeEventListener('keydown', esc, true); };
+  const esc = e => { if (e.key === 'Escape' && ov === [...document.querySelectorAll('.qh-ov')].pop()) { e.stopPropagation(); close(); } };
+  document.addEventListener('keydown', esc, true);
+  ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-x]')) close(); });
+  ov.close = close; return ov;
+}
+
+/* ---------- חלון שינוי כמות: כמות, כיוון, סיבה (חובה), תאריך ---------- */
+function form(it, opt, onOk) {
+  const e = opt.entry, sign = e ? (N(e.delta) < 0 ? -1 : 1) : (opt.sign || 1);
+  const amt = e ? Math.abs(N(e.delta)) : (opt.amount != null ? opt.amount : 1);
+  const lockAmt = !!opt.lockAmt;
+  const body = `<div class="qh-fm">
+    <div class="f"><label>סוג השינוי</label><div class="qh-dir"><button type="button" data-s="1" class="p ${sign > 0 ? 'on' : ''}" ${lockAmt ? 'disabled' : ''}><i class="fa-solid fa-plus"></i> הוספה למלאי</button><button type="button" data-s="-1" class="m ${sign < 0 ? 'on' : ''}" ${lockAmt ? 'disabled' : ''}><i class="fa-solid fa-minus"></i> הפחתה מהמלאי</button></div></div>
+    <div><label for="qhAmt">כמות *</label><input id="qhAmt" type="number" min="0" step="any" value="${E(amt)}" ${lockAmt ? 'disabled' : ''}></div>
+    <div><label for="qhDate">תאריך *</label><input id="qhDate" type="date" value="${E(e ? e.date : today())}"></div>
+    <div class="f"><label for="qhWhy">סיבה *</label><input id="qhWhy" list="qhWhyL" value="${E(e ? e.reason : '')}" placeholder="למשל: ניפוק לעובד, קליטת סחורה, ספירת מלאי..." autocomplete="off"><datalist id="qhWhyL">${reasons().map(r => `<option value="${E(r)}">`).join('')}</datalist></div>
+    ${opt.applyBox ? `<div class="f"><label class="qh-chk"><input type="checkbox" id="qhApply" checked> ${e ? 'עדכן את הכמות במלאי בהתאם לשינוי' : 'עדכן גם את הכמות במלאי'}</label></div>` : ''}
+    <div class="qh-prev" id="qhPrev"></div></div>`;
+  const ov = shell('sm', 'fa-boxes-stacked', opt.title, E(it.name) + (it.sku ? ' · ' + E(it.sku) : ''), body,
+    `<button type="button" class="qh-b g" data-ok><i class="fa-solid fa-check"></i> שמירה</button><button type="button" class="qh-b o" data-x>ביטול</button>`);
+  let s = sign;
+  const $ = q => ov.querySelector(q);
+  const delta = () => s * Math.abs(N($('#qhAmt').value));
+  const prev = () => {
+    const ap = !$('#qhApply') || $('#qhApply').checked;
+    const base = N(it.quantity), d = e ? delta() - N(e.delta) : delta();
+    $('#qhPrev').innerHTML = lockAmt ? `שינוי: ${N(opt.from)} ← ${N(opt.to)} (${delta() > 0 ? '+' : ''}${delta()})`
+      : ap ? `כמות נוכחית: ${base} ← אחרי השמירה: ${Math.max(0, base + d)}` : 'רישום בלבד – הכמות במלאי לא תשתנה';
+  };
+  ov.querySelectorAll('.qh-dir button').forEach(b => b.onclick = () => { s = +b.dataset.s; ov.querySelectorAll('.qh-dir button').forEach(x => x.classList.toggle('on', x === b)); prev(); });
+  ov.addEventListener('input', prev); ov.addEventListener('change', prev); prev();
+  $('[data-ok]').onclick = () => {
+    const d = delta(), why = $('#qhWhy').value.trim(), dt = $('#qhDate').value;
+    if (!lockAmt && !N($('#qhAmt').value)) return alert('יש להזין כמות');
+    if (!why) { $('#qhWhy').focus(); return alert('יש לרשום סיבה לשינוי'); }
+    if (!dt) return alert('יש לבחור תאריך');
+    ov.close(); onOk({ delta: d, reason: why, date: dt, apply: !$('#qhApply') || $('#qhApply').checked });
+  };
+  setTimeout(() => (lockAmt ? $('#qhWhy') : $('#qhAmt')).focus(), 30);
+}
+
+/* ---------- כפתורי +/- : פותחים חלון סיבה + תאריך ---------- */
+window.adjustQuantity = function (id, delta) {
+  const it = itemOf(id); if (!it) return;
+  if (!okQty()) return alert('אין לך הרשאה לעדכן כמויות');
+  form(it, { title: 'עדכון כמות במלאי', sign: delta < 0 ? -1 : 1, amount: Math.abs(N(delta)) || 1 }, r => {
+    const old = N(it.quantity), nq = Math.max(0, old + r.delta), real = nq - old;
+    if (!real) return alert('הכמות לא השתנתה (המלאי לא יכול לרדת מתחת ל-0)');
+    setQty(it, nq); addEntry(it, real, r.reason, r.date);
+    try { addLog(`עודכנה כמות "${it.name}": ${old} ← ${nq} (סיבה: ${r.reason})`); } catch (e) { }
+    refresh();
+  });
+};
+
+/* ---------- עריכת פריט: אם הכמות שונתה – חובה סיבה + תאריך ---------- */
+const _hif = window.handleItemFormSubmit;
+if (typeof _hif === 'function') window.handleItemFormSubmit = function (ev) {
+  const id = (document.getElementById('itemId') || {}).value;
+  const it = id && itemOf(id);
+  const nq = N((document.getElementById('itemQuantity') || {}).value);
+  if (!it || nq === N(it.quantity)) {
+    const wasNew = !it, r = _hif.apply(this, arguments);
+    if (wasNew) { try { const sku = document.getElementById('itemSku').value.trim(); const n = (appData.inventory || []).slice().reverse().find(i => i.sku === sku && !arr(i.qtyLog).length); if (n && N(n.quantity)) { addEntry(n, N(n.quantity), 'קליטת פריט חדש למלאי', today(), 1); n.qtyLast = N(n.quantity); saveData(); renderInventoryTable(); } } catch (e) { } }
+    return r;
+  }
+  if (ev && ev.preventDefault) ev.preventDefault();
+  const old = N(it.quantity);
+  form(it, { title: 'שינוי כמות בעריכת פריט', sign: nq - old < 0 ? -1 : 1, amount: Math.abs(nq - old), lockAmt: true, from: old, to: nq }, r => {
+    let res; skip = 1;
+    try { res = _hif.call(window, { preventDefault() { }, target: document.getElementById('itemForm') }); } finally { skip = 0; }
+    const cur = itemOf(id); if (cur) { const d = N(cur.quantity) - old; if (d) addEntry(cur, d, r.reason, r.date); cur.qtyLast = N(cur.quantity); refresh(); }
+    return res;
+  });
+};
+
+/* ---------- שינויים שנעשו ממקום אחר (קבלת הזמנה, העוזרת האישית...) נרשמים אוטומטית ---------- */
+let skip = 0;
+function autoCatch() {
+  if (skip) return;
+  let ch = 0;
+  (appData.inventory || []).forEach(it => {
+    const q = N(it.quantity);
+    if (it.qtyLast == null) { it.qtyLast = q; return; }
+    if (N(it.qtyLast) !== q) { addEntry(it, q - N(it.qtyLast), 'עדכון אוטומטי (הזמנה / עדכון מערכת)', today(), 1); it.qtyLast = q; ch = 1; }
+  });
+  if (ch) { try { saveData(); } catch (e) { } }
+}
+
+/* ---------- כפתור ליד הכמות בטבלה ---------- */
+const _rit = window.renderInventoryTable;
+if (typeof _rit === 'function') window.renderInventoryTable = function () {
+  try { autoCatch(); } catch (e) { console.warn('qh auto', e); }
+  const r = _rit.apply(this, arguments);
+  try {
+    document.querySelectorAll('#inventoryTableBody button[onclick^="adjustQuantity"]').forEach(b => {
+      const m = /adjustQuantity\('([^']+)',\s*1\)/.exec(b.getAttribute('onclick') || ''); if (!m) return;
+      const wrap = b.parentElement; if (!wrap || wrap.querySelector('.qh-btn')) return;
+      const it = itemOf(m[1]); if (!it) return;
+      const n = logOf(it).length;
+      wrap.insertAdjacentHTML('beforeend', `<button type="button" class="qh-btn ${n ? '' : 'z'}" onclick="qhOpen('${E(it.id)}')" title="פירוט שינויי הכמות (${n})"><i class="fa-solid fa-clock-rotate-left"></i> ${n}</button>`);
+    });
+  } catch (e) { console.warn('qh btn', e); }
+  return r;
+};
+
+/* ---------- חלון פירוט שינויים ---------- */
+window.qhOpen = function (id) {
+  const it = itemOf(id); if (!it) return;
+  document.querySelectorAll('.qh-ov[data-list]').forEach(x => x.remove());
+  const B = balances(it).slice().reverse(), ed = okQty();
+  const plus = B.reduce((a, x) => a + Math.max(0, N(x.e.delta)), 0), minus = B.reduce((a, x) => a + Math.max(0, -N(x.e.delta)), 0);
+  const rows = B.map((x, i) => { const d = N(x.e.delta); return `<tr>
+    <td>${B.length - i}</td><td style="white-space:nowrap">${E(fmtD(x.e.date))}</td>
+    <td class="${d < 0 ? 'qh-m' : 'qh-p'}" style="white-space:nowrap">${d > 0 ? '+' : ''}${d}</td>
+    <td style="white-space:nowrap">${x.before} ← <b>${x.after}</b></td>
+    <td>${E(x.e.reason)}${x.e.auto ? ' <span style="font-size:10px;color:#94a3b8">(אוטומטי)</span>' : ''}</td>
+    <td style="font-size:12px;color:#64748b">${E(x.e.user || '')}</td>
+    ${ed ? `<td style="white-space:nowrap"><button type="button" class="qh-ic e" title="עריכה" data-ed="${E(x.e.id)}"><i class="fa-solid fa-pen-to-square"></i></button><button type="button" class="qh-ic d" title="מחיקה" data-dl="${E(x.e.id)}"><i class="fa-solid fa-trash"></i></button></td>` : ''}</tr>`; }).join('');
+  const body = `<div class="qh-sum"><div>כמות נוכחית<b>${N(it.quantity)}</b></div><div>מספר שינויים<b>${B.length}</b></div><div>סה"כ נוסף<b class="qh-p">+${plus}</b></div><div>סה"כ הופחת<b class="qh-m">-${minus}</b></div></div>
+    ${B.length ? `<div style="overflow-x:auto"><table class="qh-tb"><thead><tr><th>#</th><th>תאריך</th><th>שינוי</th><th>כמות לפני ← אחרי</th><th>סיבה</th><th>עודכן ע"י</th>${ed ? '<th>פעולות</th>' : ''}</tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="qh-empty">עדיין לא נרשמו שינויי כמות לפריט זה</div>'}`;
+  const ov = shell('', 'fa-clock-rotate-left', 'פירוט שינויי כמות', E(it.name) + (it.sku ? ' · מק"ט ' + E(it.sku) : ''), body,
+    (ed ? `<button type="button" class="qh-b" data-add><i class="fa-solid fa-plus"></i> הוספת שינוי ידני</button>` : '') + `<button type="button" class="qh-b o" data-x>סגור</button>`);
+  ov.dataset.list = id;
+  const reopen = () => { ov.close(); qhOpen(id); };
+  const add = ov.querySelector('[data-add]');
+  if (add) add.onclick = () => form(it, { title: 'הוספת שינוי ידני', applyBox: true }, r => {
+    const old = N(it.quantity);
+    if (r.apply) { const nq = Math.max(0, old + r.delta); setQty(it, nq); addEntry(it, nq - old, r.reason, r.date); }
+    else addEntry(it, r.delta, r.reason, r.date);
+    try { addLog(`נוסף רישום שינוי כמות ידני ל"${it.name}" (${r.delta > 0 ? '+' : ''}${r.delta}, ${r.reason})`); } catch (e) { }
+    refresh(); reopen();
+  });
+  ov.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => {
+    const e = logOf(it).find(x => x.id === b.dataset.ed); if (!e) return;
+    form(it, { title: 'עריכת שינוי כמות', entry: e, applyBox: true }, r => {
+      const diff = r.delta - N(e.delta);
+      if (r.apply && diff) { const old = N(it.quantity), nq = Math.max(0, old + diff); setQty(it, nq); e.delta = N(e.delta) + (nq - old); }
+      else e.delta = r.delta;
+      e.reason = r.reason; e.date = r.date; e.auto = 0; e.editedBy = who(); e.editedTs = Date.now();
+      try { addLog(`נערך רישום שינוי כמות של "${it.name}"`); } catch (er) { }
+      refresh(); reopen();
+    });
+  });
+  ov.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => {
+    const e = logOf(it).find(x => x.id === b.dataset.dl); if (!e) return;
+    const d = N(e.delta);
+    const c = shell('sm', 'fa-trash', 'מחיקת רישום', `${fmtD(e.date)} · ${d > 0 ? '+' : ''}${d} · ${E(e.reason)}`,
+      `<p style="margin:0;font-size:14px">איך למחוק את הרישום?</p>`,
+      `<button type="button" class="qh-b r" data-m="1"><i class="fa-solid fa-rotate-left"></i> מחק והחזר את הכמות (${N(it.quantity)} ← ${Math.max(0, N(it.quantity) - d)})</button><button type="button" class="qh-b r" data-m="0" style="background:#f97316"><i class="fa-solid fa-trash"></i> מחק רישום בלבד</button><button type="button" class="qh-b o" data-x>ביטול</button>`);
+    c.querySelectorAll('[data-m]').forEach(x => x.onclick = () => {
+      if (x.dataset.m === '1') setQty(it, N(it.quantity) - d);
+      it.qtyLog = logOf(it).filter(y => y.id !== e.id);
+      try { addLog(`נמחק רישום שינוי כמות של "${it.name}"`); } catch (er) { }
+      c.close(); refresh(); reopen();
+    });
+  });
+};
+try { renderInventoryTable(); } catch (e) { }
 })();
 </script>
 
